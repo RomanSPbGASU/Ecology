@@ -48,7 +48,9 @@ U = 4  # скорость ветра, направленного вдоль ос
 K = 20  # коэффициент турбулентной диффузии
 
 x_max = H ** 2 * U / (2 * K)  # точка, в которой концентрация на нулевой высоте достигает максимума
-print(x_max)
+
+
+# print(x_max)
 
 
 def ca(x):  # аналитическое решение
@@ -56,18 +58,13 @@ def ca(x):  # аналитическое решение
 
 
 pr_gr = int(4 * x_max)
-print(pr_gr, type(pr_gr))
+# print(pr_gr, type(pr_gr))
 
 dots = []
 
 for i in range(1, pr_gr):
     dots.append(ca(i))
 
-# plt.plot(dots, color='#f12')
-# plt.ylabel('c, г/м')
-# plt.xlabel('x, м')
-# plt.legend(['аналитическое решение'])
-# plt.show()
 
 h_x = 250
 h_z = 25
@@ -84,41 +81,50 @@ MA[0][0] = -1
 MA[0][1] = -1
 MA[d_size - 1][d_size - 1] = -1
 MA[d_size - 1][d_size - 2] = 0
-print(MA)
+# print(MA)
 
 F = np.zeros(shape=[16], dtype=int)
+F[5] = M / U * h_z
 print(F)
 
 for i, elem in enumerate(F):
     F[i] = -h_z ** 2 / h_x * U * elem
 
-result = np.zeros(d_size)
 A = np.diag(MA, k=-1)
 B = np.diag(MA, k=1)
 C = np.diag(MA)
-print(A, '\n', B, '\n', C)
-
-for p in range(d_size):
-    alpha = np.zeros(d_size)
-    beta = np.zeros(d_size)
-    x = np.zeros(d_size)
-    alpha[0] = B[0] / C[0]
-    beta[0] = -F[0] / C[0]
-
-    for i in range(1, d_size - 1):
-        alpha[i] = B[i] / (C[i] - alpha[i-1] * A[i-1])
-        beta[i] = A[i] * beta[i-1] - F[i] / (C[i] - alpha[i-1] * A[i-1])
-
-    x[-1] = beta[-1]
-
-    for i in range(-1, 0, -1):
-        x[i] = alpha[i] * x[i + 1] + beta[i]
-
-    result[p] = x[1]
-
-    for i in range(d_size):
-        F[i] = -h_z ** 2 / h_x * U * x[i]
-
-print(F)
 
 
+# print(A, '\n', B, '\n', C)
+
+
+def tridiagonal_matrix_algorithm(a, b, c, f):
+    alpha = [0]
+    beta = [0]
+    n = len(f)
+    x = [0] * n
+
+
+#    a, b, c, f = map(lambda k_list: map(float, k_list), (a, b, c, f))
+
+    for i in range(n - 1):
+        alpha.append(-b[i] / (a[i] * alpha[i] + c[i]))
+        beta.append((f[i] - a[i] * beta[i]) / (a[i] * alpha[i] + c[i]))
+
+    x[n - 1] = (f[n - 1] - a[n - 2] * beta[n - 1]) / (c[n - 1] + a[n - 2] * alpha[n - 1])
+
+    for i in reversed(range(n - 1)):
+        x[i] = alpha[i + 1] * x[i + 1] + beta[i + 1]
+
+    return x
+
+
+numeric = tridiagonal_matrix_algorithm(A, B, C, list(F))
+print(numeric)
+
+#plt.plot(dots, color='#f12')
+plt.plot(numeric, color='#b48')
+plt.ylabel('c, г/м')
+plt.xlabel('x, м')
+plt.legend(['аналитическое решение', 'численное решение'])
+plt.show()

@@ -1,5 +1,7 @@
 from math import sqrt, pi, exp
+import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cmap
 
 
 def tridiagonal_matrix_algorithm(a, b, c, f):
@@ -23,65 +25,62 @@ def tridiagonal_matrix_algorithm(a, b, c, f):
     return y
 
 
-M = 10  # мощность выброса (в граммах в секунду на метр) источника
+def ca(x):  # аналитическое решение
+    return M / (sqrt(U * pi * K * x)) * exp(-H ** 2 * U / (4 * K * x))
+
+
+M = 10  # Intensity of emission - мощность выброса (в граммах в секунду на метр) источника
 H = 40  # высота источника
 U = 4  # скорость ветра, направленного вдоль оси x
 K = 20  # коэффициент турбулентной диффузии
 dz = 1  # шаг по z [м]
 dx = 1  # шаг по x [м]
 
-x_max = H ** 2 * U / (2 * K)  # точка, в которой концентрация на нулевой высоте достигает максимума
+x_cMax = H ** 2 * U / (2 * K)  # точка, в которой концентрация на нулевой высоте достигает максимума
 
-x_m = int(4 * x_max)  # граница по x
-z_n = max(4 * H, 100)  # граница по y
-# print(x_m, ' ', z_n)
+x_b = int(4 * x_cMax)  # граница по x
+z_b = max(4 * H, 100)  # граница по y
 
-# TODO: исправить приведение к int - выразить целочисленно
-n = int(z_n / dz)  # количество отрезков, на которые разбивается исследуемый интервал по z - размерность матрицы
-m = int(x_m / dx)  # количество отрезков по x - количество "слоёв" для расчёта
+n = int(z_b / dz)  # количество отрезков, на которые разбивается исследуемый интервал по z - размерность матрицы
+
 i_s = int(H / dz)  # положение начальной концентрации рассеиваемого вещества (nH должно быть целым числом)
 c_i = M / (U * dz)  # начальное значение концентрации
 c_0 = [.0] * n
 c_0[i_s] = c_i  # вектор начальных концентраций
-# print("c_o", c_0)
 
 c = (2 * K + dz ** 2 / dx * U)  # коэффициент на главной диагонали
 A = [0] + [K] * (n - 1)  # диагональ под главной
+# ??? собака зарыта в граничных условиях, которые почему-то были заданы как -1 ???
 B = [-1] + [K] * (n - 1)  # диагональ над главной
 C = [-1] + [c] * (n - 2) + [-1]  # главная диагональ
-# print(A, '\n', B, '\n', C)
 
 c_prev = c_0
-results = [[0.] * n] * (m + 1)
 f = [0] * n
 p = -dz ** 2 / dx * U  # коэффициент функции
 
-results[0] = c_prev
+X = [0.0001] + list(range(dx, x_b, dx))
+analytic_result = []
+numeric_results = []
 
-for xi in range(1, m + 1):
+for i in X:
+    analytic_result.append(ca(i))
+    numeric_results.append(c_prev)
     for i in range(1, n):
         f[i] = p * c_prev[i]
-
     c = tridiagonal_matrix_algorithm(A, B, C, f)
     c_prev = c.copy()
-    results[xi] = c
+transposed_results = list(zip(*numeric_results))
 
-print(results)
+figure, ax = plt.subplots()
+ax.plot(X, analytic_result, color='#f12')
+ax.plot(X, transposed_results[0], color='#38a')
+ax.set(ylabel='c, г/м', xlabel='x, м')
+ax.legend(['аналитическое решение', 'численное решение'])
+figure.show()
 
-
-def ca(x):  # аналитическое решение
-    return M / (sqrt(U * pi * K * x)) * exp(-H ** 2 * U / (4 * K * x))
-
-
-dots = []
-
-for i in range(1, x_m):
-    dots.append(ca(i))
-
-plt.plot(dots, color='#f12')
-transposed_results = list(zip(*results))
-plt.plot(transposed_results[0], color='#38a')
-plt.ylabel('c, г/м')
-plt.xlabel('x, м')
-plt.legend(['аналитическое решение', 'численное решение'])
+plt.figure(figsize=[8, 6])
+m = np.array(list(zip(*numeric_results[1:])))
+plt.imshow(m, cmap='hot', aspect='auto')
+plt.gca().invert_yaxis()
+plt.colorbar()
 plt.show()

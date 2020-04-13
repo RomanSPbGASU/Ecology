@@ -5,6 +5,43 @@ from random import gauss, randrange
 from enum import Enum
 
 
+class SelectionMethod(Enum):
+    FITNEST_HALF = 'Fitnest Half'
+    ROULETTE_WHEEL = 'Roulette Wheel'
+    RANDOM = 'Random'
+
+
+class PairingMethod(Enum):
+    FITTEST = 'Fittest'
+    RANDOM = 'Random'
+    WEIGHTED_RANDOM = 'Weighted Random'
+
+
+class MatingMethod(Enum):
+    SINGLE_POINT = 'Single Point'
+    TWO_POINTS = 'Two Pionts'
+
+
+class MutationMethod(Enum):
+    RESET = 'Reset'
+    GAUSS = 'Gauss'
+
+
+# class Generation(Enum):
+#     FITNESS = 'Fitness'
+#     CUMULATIVE_SUM = 'Cumulative Sum'
+#     NORMALIZED_FITNESS = 'Normalized Fitness'
+#     INDIVIDUALS = 'Individuals'
+
+
+class Generation:
+    def __init__(self):
+        self.fitness = []
+        self.individuals = []
+        self.cumulative_sum = []
+        self.normalized_fitness = []
+
+
 def individual(number_of_genes, upper_limit, lower_limit):
     return [round(rnd() * (upper_limit - lower_limit) + lower_limit, 1) for x in range(number_of_genes)]
 
@@ -24,45 +61,43 @@ def roulette(cum_sum, chance):
     return variable.index(chance)
 
 
-class Method(Enum):
-    FITNEST_HALF = 'Fitnest Half'
-    ROULETTE_WHEEL = 'Roulette Wheel'
-    RANDOM = 'Random'
 
 
-class Generation(Enum):
-    FITNESS = 'Fitness'
-    CUMULATIVE_SUM = 'Cumulative Sum'
-    NORMALIZED_FITNESS = 'Normalized Fitness'
-    INDIVIDUALS = 'Individuals'
 
-
-def selection(generation: Generation, method: Method = Method.FITNEST_HALF):
+def selection(generation: Generation, method: SelectionMethod = SelectionMethod.FITNEST_HALF):
     # для каждого из фитнесов в генерэйшене вычислим его нормализованное значение разделив его на сумму всех фитнесов
-    generation[Generation.NORMALIZED_FITNESS] = sorted(
-        [fitness_value / sum(generation[Generation.FITNESS]) for fitness_value in generation[Generation.FITNESS]],
+    generation.normalized_fitness = sorted(
+        [fitness_value / sum(generation.fitness) for fitness_value in generation.fitness],
         reverse=True)
-    generation[Generation.CUMULATIVE_SUM] = np.array(generation[Generation.NORMALIZED_FITNESS]).cumsum()
-    if method == Method.ROULETTE_WHEEL:
+    generation.cumulative_sum = np.array(generation.normalized_fitness).cumsum()
+    if method == SelectionMethod.ROULETTE_WHEEL:
         selected = []
-        for x in range(len(generation[Generation.INDIVIDUALS]) // 2):
-            selected.append(roulette(generation[Generation.CUMULATIVE_SUM], rnd()))
+        for x in range(len(generation.individuals) // 2):
+            selected.append(roulette(generation.cumulative_sum, rnd()))
+            # пока все элементы в списке не будут уникальными
             while len(set(selected)) != len(selected):
-                selected[x] = (roulette(generation[Generation.CUMULATIVE_SUM], rnd()))
-                selected = {Generation.INDIVIDUALS: [generation[Generation.INDIVIDUALS][int(selected[x])] for x in
-                                                     range(len(generation[Generation.INDIVIDUALS]) // 2)]}
-    elif method == Method.FITNEST_HALF:
-        selected_individuals = [generation[Generation.INDIVIDUALS][-x - 1] for x in
-                                range(int(len(generation[Generation.INDIVIDUALS]) // 2))]
-        selected_fitnesses = [generation[Generation.FITNESS][-x - 1] for x in
-                              range(int(len(generation[Generation.INDIVIDUALS]) // 2))]
-        selected = {Generation.INDIVIDUALS: selected_individuals, Generation.FITNESS: selected_fitnesses}
-    elif method == Method.RANDOM:
-        selected_individuals = [generation[Generation.INDIVIDUALS][randint(1, len(generation[Generation.FITNESS]))] for
-                                x in range(int(len(generation[Generation.INDIVIDUALS]) // 2))]
-        selected_fitnesses = [generation[Generation.FITNESS][-x - 1] for x in
-                              range(int(len(generation[Generation.INDIVIDUALS]) // 2))]
-        selected = {Generation.INDIVIDUALS: selected_individuals, Generation.FITNESS: selected_fitnesses}
+                selected[x] = (roulette(generation.cumulative_sum, rnd()))
+                selected = Generation()
+                selected.individuals = [generation.individuals[int(selected[x])] for x in
+                                             range(len(generation.individuals) // 2)]
+                selected.fitness = [generation.fitness[int(selected[x])] for x in
+                                         range(len(generation.individuals) // 2)]
+    elif method == SelectionMethod.FITNEST_HALF:
+        selected_individuals = [generation.individuals[-x - 1] for x in
+                                range(int(len(generation.individuals) // 2))]
+        selected_fitnesses = [generation.fitness[-x - 1] for x in
+                              range(int(len(generation.individuals) // 2))]
+        selected = {
+            Generation.INDIVIDUALS: selected_individuals,
+            Generation.FITNESS: selected_fitnesses}
+    elif method == SelectionMethod.RANDOM:
+        selected_individuals = [generation.individuals[randint(1, len(generation.fitness))] for
+                                x in range(int(len(generation.individuals) // 2))]
+        selected_fitnesses = [generation.fitness[-x - 1] for x in
+                              range(int(len(generation.individuals) // 2))]
+        selected = {
+            Generation.INDIVIDUALS: selected_individuals,
+            Generation.FITNESS: selected_fitnesses}
     else:
         raise ValueError
     return selected

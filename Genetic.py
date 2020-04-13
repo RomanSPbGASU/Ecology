@@ -55,11 +55,7 @@ def fitness_calculation(individual):
 
 
 def roulette(cum_sum, chance):
-    variable = list(cum_sum.copy())
-    variable.append(chance)
-    variable = sorted(variable)
-    return variable.index(chance)
-
+    return sorted([*cum_sum.copy(), chance]).index(chance)
 
 
 

@@ -59,8 +59,6 @@ class GenerationMember:
     def __init__(self, individual: Individual):
         self.individual = individual
         self.fitness = None
-        self.normalized_fitness = None
-        self.cumulative_sum = None
 
     def __get__(self, instance, owner):
         return instance
@@ -71,7 +69,7 @@ class Generation(UserList):
         super().__init__()
         self.data = [GenerationMember(individual) for individual in individuals]
         self._fitness_function = fitness_function
-        self.calc()
+        self.calc_fitness()
 
     @classmethod
     def initialize_generation(cls, number_of_individuals, number_of_genes, lower_limit, upper_limit) -> Generation:
@@ -93,27 +91,6 @@ class Generation(UserList):
         for member in self.data:
             member.fitness = self.fitness_function(member.individual.genes)
 
-    def calc_normalized_fitnesses(self) -> None:
-        total = sum(self.fitnesses)
-        for member in self.data:
-            member.normalized_fitness = member.fitness / total
-        self.data.sort(key=lambda member: member.normalized_fitness)
-
-    def calc_cumulative_sum(self) -> None:
-        if not self.normalized_fitnesses:
-            self.calc_normalized_fitnesses()
-        else:
-            self.data.sort(key=lambda member: member.normalized_fitness)
-        sum = 0
-        for member in self.data:
-            sum += member.normalized_fitness
-            member.cumulative_sum = sum
-
-    def calc(self):
-        self.calc_fitness()
-        self.calc_normalized_fitnesses()
-        self.calc_cumulative_sum()
-
     @property
     def individuals(self):
         return [member.individual for member in self.data]
@@ -121,14 +98,6 @@ class Generation(UserList):
     @property
     def fitnesses(self):
         return [member.fitness for member in self.data]
-
-    @property
-    def normalized_fitnesses(self):
-        return [member.normalized_fitness for member in self.data]
-
-    @property
-    def cumulative_sums(self):
-        return [member.cumulative_sum for member in self.data]
 
 
 def fitness_calculation(individual: Individual):
@@ -142,7 +111,7 @@ def selection(generation: Generation, method: SelectionMethod = SelectionMethod.
 
     if method == SelectionMethod.ROULETTE_WHEEL:
         while len(new_population) != half_count:
-            new_population.add(choices(generation, cum_weights=generation.cumulative_sums))
+            new_population.add(choices(generation, weights=generation.fitnesses))
 
     elif method == SelectionMethod.FITNEST_HALF:
         generation.data.sort(key=lambda member: member.fitness)
@@ -154,10 +123,8 @@ def selection(generation: Generation, method: SelectionMethod = SelectionMethod.
     return Generation(new_population)
 
 
-def pairing(elite: GenerationMember, selected: Generation, method: PairingMethod = PairingMethod.FITTEST):
-    generation = Generation([elite.individual, *selected.individuals])
+def pairing(generation: Generation, method: PairingMethod = PairingMethod.FITTEST):
     half_count = len(generation.individuals) // 2
-
     parents = []
 
     if method == PairingMethod.FITTEST:
@@ -174,7 +141,7 @@ def pairing(elite: GenerationMember, selected: Generation, method: PairingMethod
     elif method == PairingMethod.WEIGHTED_RANDOM:
         parents = set()
         while len(parents) != half_count:
-            parents.add(set(choices(generation, cum_weights=generation.cumulative_sums, k=2)))
+            parents.add(set(choices(generation, weights=generation.fitnesses, k=2)))
 
     return parents
 
@@ -225,7 +192,7 @@ def next_generation(generation: Generation, lower_limit, upper_limit) -> Generat
 
     selected = selection(generation)
 
-    parents = pairing(elite_member, selected)
+    parents = pairing(selected)
     offsprings = [[[mating(parents[x])
                     for x in range(len(parents))]
                    [y][z] for z in range(2)]
@@ -235,11 +202,11 @@ def next_generation(generation: Generation, lower_limit, upper_limit) -> Generat
     offsprings2 = [offsprings[x][1]
                    for x in range(len(parents))]
 
-    unmutated = selected + offsprings1 + offsprings2
+    unmutated = [member.individual for member in selected] + offsprings1 + offsprings2
 
     mutated = Generation([mutation(unmutated_member, lower_limit, upper_limit) for unmutated_member in unmutated])
     mutated.append(elite_member)
-    mutated.calc()
+    mutated.calc_fitness()
     mutated.sort(key=lambda member: member.fitness)
 
     return mutated
@@ -263,7 +230,7 @@ fitness_average = [np.average(generations[0].fitnesses)]
 fitness_max = [np.max(generations[0].fitnesses)]
 
 res = open(Result_file, 'a')
-res.write(f'\n{generations[0].fitnesses} {fitness_average} {fitness_max}\n')
+res.write(f'\n{generations[0].fitnesses}\t{max(fitness_average)}\t{max(fitness_max)}')
 res.close()
 
 while True:
@@ -279,5 +246,6 @@ while True:
     fitness_max.append(np.max(generations[-1].fitnesses))
 
     res = open(Result_file, 'a')
-    res.write('\n' + str(generations[-1].fitnesses) + '\n')
+    ans = f'\n{generations[-1].fitnesses}\t{max(fitness_average)}\t{max(fitness_max)}'
+    res.write(ans)
     res.close()

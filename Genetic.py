@@ -1,7 +1,10 @@
+from __future__ import annotations
+from collections import UserList
+
 import numpy as np
 from numpy.random import randint
 from random import random as rnd
-from random import gauss, randrange
+from random import gauss, randrange, sample
 from enum import Enum
 
 
@@ -27,31 +30,83 @@ class MutationMethod(Enum):
     GAUSS = 'Gauss'
 
 
-# class Generation(Enum):
-#     FITNESS = 'Fitness'
-#     CUMULATIVE_SUM = 'Cumulative Sum'
-#     NORMALIZED_FITNESS = 'Normalized Fitness'
-#     INDIVIDUALS = 'Individuals'
+# представляет набор генов для одной особи
 
-
-class Generation:
+class Individual:
     def __init__(self):
-        self.fitness = []
-        self.individuals = []
-        self.cumulative_sum = []
-        self.normalized_fitness = []
+        self.genes = None
+
+    @staticmethod
+    def create(number_of_genes, upper_limit, lower_limit) -> Individual:
+        individual = Individual()
+        individual.fill(number_of_genes, upper_limit, lower_limit)
+        return individual
+
+    def fill(self, number_of_genes, upper_limit, lower_limit):
+        self.genes = [round(rnd() * (upper_limit - lower_limit) + lower_limit, 1) for x in range(number_of_genes)]
 
 
-def individual(number_of_genes, upper_limit, lower_limit):
-    return [round(rnd() * (upper_limit - lower_limit) + lower_limit, 1) for x in range(number_of_genes)]
+class GenerationMember:
+    def __init__(self, genes: Individual):
+        self.genes = genes
+        self.fitness = fitness_calculation(genes)
+        self.normalized_fitness = None
+        self.cumulative_sum = None
+
+    def __get__(self, instance, owner):
+        return instance
 
 
-def population(number_of_individuals, number_of_genes, upper_limit, lower_limit):
-    return [individual(number_of_genes, upper_limit, lower_limit) for x in range(number_of_individuals)]
+class Generation(UserList):
+    def __init__(self, individuals: [Individual] = None):
+        super().__init__()
+        self.data = [GenerationMember(individual) for individual in individuals]
+        self.calc_normalized_fitnesses()
+        self.calc_cumulative_sum()
+
+    @classmethod
+    def initialize_generation(cls, number_of_individuals, number_of_genes, upper_limit, lower_limit) -> Generation:
+        individuals = [Individual.create(number_of_genes, upper_limit, lower_limit) for x in
+                       range(number_of_individuals)]
+        generation = cls(individuals)
+        generation.sort(k=lambda member: member.fitness)
+        return generation
+
+    def calc_normalized_fitnesses(self) -> None:
+        total = sum(self.fitnesses)
+        for member in self.data:
+            member.normalized_fitness = member.fitness / sum
+        self.data.sort(key=lambda member: member.normalized_fitness)
+
+    def calc_cumulative_sum(self) -> None:
+        if not self.normalized_fitnesses:
+            self.calc_normalized_fitnesses()
+        else:
+            self.data.sort(key=lambda member: member.normalized_fitness)
+        sum = 0
+        for member in self.data:
+            sum += member.normalized_fitness
+            member.cumulative_sum = sum
+
+    @property
+    def individuals(self):
+        return [member.individual for member in self.data]
+
+    @property
+    def fitnesses(self):
+        return [member.fitness for member in self.data]
+
+    @property
+    def normalized_fitnesses(self):
+        return [member.normalized_fitness for member in self.data]
+
+    @property
+    def cumulative_sums(self):
+        return [member.cumulative_sum for member in self.data]
 
 
-def fitness_calculation(individual):
-    return sum(individual)
+def fitness_calculation(individual: Individual):
+    return sum(individual.genes)
 
 
 def roulette(cum_sum, chance):
@@ -59,38 +114,22 @@ def roulette(cum_sum, chance):
 
 
 def selection(generation: Generation, method: SelectionMethod = SelectionMethod.FITNEST_HALF) -> Generation:
-    # для каждого из фитнесов в генерэйшене вычислим его нормализованное значение разделив его на сумму всех фитнесов
-    generation.normalized_fitness = sorted(
-        [fitness_value / sum(generation.fitness) for fitness_value in generation.fitness],
-        reverse=True)
-    generation.cumulative_sum = np.array(generation.normalized_fitness).cumsum()
-    half_count = len(generation.individuals) // 2
+    half_count = int(len(generation.individuals) // 2)
+
+    new_population = set()
+
     if method == SelectionMethod.ROULETTE_WHEEL:
-        selected_indexes = []
-        for x in range(half_count):
-            selected_indexes.append(None)
-            # пока все элементы в списке не будут уникальными
-            while True:
-                selected_indexes[x] = (roulette(generation.cumulative_sum, rnd()))
-                if len(set(selected_indexes)) != len(selected_indexes):
-                    break
-        selected = Generation()
-        selected.individuals, selected.fitness = (
-            generation.individuals[int(selected_indexes[x])],
-            generation.fitness[int(selected_indexes[x])] for x in range(half_count))
+        while len(new_population.individuals) != half_count:
+            new_population.add(generation.individuals[roulette(generation.cumulative_sums, rnd())])
+
     elif method == SelectionMethod.FITNEST_HALF:
-        selected = Generation()
-        for x in range(half_count):
-            selected.individuals.append(generation.individuals[-x - 1])
-            selected.fitness.append(generation.fitness[-x - 1])
+        generation.data.sort(key=lambda member: member.fitness)
+        new_population.individuals = generation.individuals[half_count]
+
     elif method == SelectionMethod.RANDOM:
-        selected = Generation()
-        for x in range(half_count):
-            selected.individuals.append(generation.individuals[randint(1, len(generation.fitness))])
-            selected.fitness.append(generation.fitness[-x - 1])
-    else:
-        raise ValueError
-    return selected
+        new_population.individuals = sample(generation.individuals, half_count)
+
+    return Generation(new_population)
 
 
 def pairing(elit: Generation, selected: Generation, method: PairingMethod = PairingMethod.FITTEST):

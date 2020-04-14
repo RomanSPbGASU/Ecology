@@ -8,6 +8,7 @@ from typing import Callable, Collection, Union
 
 import numpy as np
 from numpy.random import randint
+from numpy import clip
 
 Num = Union[int, float]
 
@@ -170,14 +171,14 @@ def mating(couple: [Individual], method: MatingMethod = MatingMethod.SINGLE_POIN
 
 
 def mutation(individual: Individual, lower_limit, upper_limit, mutation_rate=2,
-             method: MutationMethod = MutationMethod.RESET, standard_deviation=0.001):
+             method: MutationMethod = MutationMethod.RESET, standard_deviation=2):
     gene_indexes = sample(range(len(individual.genes)), mutation_rate)
     mutated_individual = individual.copy()
 
     if method == MutationMethod.GAUSS:
         for x in gene_indexes:
             mutated_individual.genes[x] = \
-                round(individual.genes[x] + gauss(0, standard_deviation), 1)
+                clip(int(individual.genes[x] + gauss(0, standard_deviation)), lower_limit, upper_limit)
 
     if method == MutationMethod.RESET:
         for x in gene_indexes:
@@ -186,7 +187,7 @@ def mutation(individual: Individual, lower_limit, upper_limit, mutation_rate=2,
     return mutated_individual
 
 
-def next_generation(generation: Generation, lower_limit, upper_limit) -> Generation:
+def next_generation(generation: Generation, lower_limit, upper_limit, mutation_deviation) -> Generation:
     elite_member = generation.pop(-1)
 
     selected = selection(generation)
@@ -201,7 +202,9 @@ def next_generation(generation: Generation, lower_limit, upper_limit) -> Generat
 
     unmutated = [member.individual for member in selected] + offsprings
 
-    mutated = Generation([mutation(unmutated_member, lower_limit, upper_limit, 1) for unmutated_member in unmutated])
+    mutated = Generation(
+        [mutation(unmutated_member, lower_limit, upper_limit, 1, MutationMethod.GAUSS, mutation_deviation) for
+         unmutated_member in unmutated], generation.fitness_function)
     mutated.append(elite_member)
     mutated.calc_fitness()
     mutated.sort(key=lambda member: member.fitness)
@@ -219,30 +222,43 @@ def fitness_similarity_check(max_fitness, number_of_similarity):
     return similarity == number_of_similarity - 1
 
 
-# Generations and fitness values will be written to this file
-Result_file = 'GA_Results.txt'  # Creating the First Generation
+def run(generation_count=21,
+        genes_count=4,
+        lower_limit=0,
+        upper_limit=10,
+        max_fitness_condition=39,
+        average_fitness_condition=35,
+        similarity_length=20,
+        mutation_deviation=2,
+        fitness_function=sum,
+        result_file='GA_Results.txt'):
+    first_generation = Generation.initialize_generation(generation_count, genes_count, lower_limit, upper_limit)
+    first_generation.fitness_function = fitness_function
 
-generations = [Generation.initialize_generation(21, 4, 0, 10)]
-fitness_average = [np.average(generations[0].fitnesses)]
-fitness_max = [np.max(generations[0].fitnesses)]
+    generations = [first_generation]
+    fitness_average = [np.average(generations[0].fitnesses)]
+    fitness_max = [np.max(generations[0].fitnesses)]
 
-res = open(Result_file, 'w')
-res.write(f'\n{len(generations)}\t{max(fitness_average)}\t{max(fitness_max)}\t{generations[0].fitnesses}')
-res.close()
-
-while True:
-    if max(fitness_max) == 40:
-        break
-    if max(fitness_average) > 35:
-        break
-    if fitness_similarity_check(fitness_max, 20):
-        break
-    generations.append(next_generation(generations[-1], 0, 10))
-
-    fitness_average.append(np.average(generations[-1].fitnesses))
-    fitness_max.append(np.max(generations[-1].fitnesses))
-
-    res = open(Result_file, 'a')
-    ans = f'\n{len(generations)}\t{max(fitness_average)}\t{max(fitness_max)}\t{generations[-1].fitnesses}'
-    res.write(ans)
+    res = open(result_file, 'w')
+    res.write(f'\n{len(generations)}\t{max(fitness_average)}\t{max(fitness_max)}\t{generations[0].fitnesses}')
     res.close()
+
+    while True:
+        if max(fitness_max) > max_fitness_condition:
+            break
+        if max(fitness_average) > average_fitness_condition:
+            break
+        if fitness_similarity_check(fitness_max, similarity_length):
+            break
+        generations.append(next_generation(generations[-1], lower_limit, upper_limit, mutation_deviation))
+
+        fitness_average.append(np.average(generations[-1].fitnesses))
+        fitness_max.append(np.max(generations[-1].fitnesses))
+
+        res = open(result_file, 'a')
+        ans = f'\n{len(generations)}\t{max(fitness_average)}\t{max(fitness_max)}\t{generations[-1].fitnesses}'
+        res.write(ans)
+        res.close()
+
+
+run(41, 20, -100, 100, 1950, 1900, 10, 20)

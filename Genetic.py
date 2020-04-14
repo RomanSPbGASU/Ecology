@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections import UserList
 from enum import Enum
 from random import gauss, sample, choices, shuffle
@@ -70,13 +71,13 @@ class Generation(UserList):
         self.data = [GenerationMember(individual) for individual in individuals]
         self._fitness_function = fitness_function
         self.calc_fitness()
+        self.sort(key=lambda member: member.fitness)
 
     @classmethod
     def initialize_generation(cls, number_of_individuals, number_of_genes, lower_limit, upper_limit) -> Generation:
         individuals = [Individual.create(number_of_genes, lower_limit, upper_limit) for x in
                        range(number_of_individuals)]
         generation = cls(individuals)
-        generation.sort(key=lambda member: member.fitness)
         return generation
 
     @property
@@ -105,7 +106,7 @@ def fitness_calculation(individual: Individual):
 
 
 def selection(generation: Generation, method: SelectionMethod = SelectionMethod.FITNEST_HALF) -> Generation:
-    half_count = int(len(generation.individuals) // 2)
+    half_count = len(generation.individuals) // 2
 
     new_population = set()
 
@@ -120,17 +121,17 @@ def selection(generation: Generation, method: SelectionMethod = SelectionMethod.
     elif method == SelectionMethod.RANDOM:
         new_population.update(sample(generation.individuals, half_count))
 
-    return Generation(new_population)
+    return Generation(list(new_population))
 
 
-def pairing(generation: Generation, method: PairingMethod = PairingMethod.FITTEST):
+def pairing(generation: Generation, method: PairingMethod = PairingMethod.FITTEST) -> list:
     half_count = len(generation.individuals) // 2
     parents = []
 
     if method == PairingMethod.FITTEST:
         parents = [[generation.individuals[x],
                     generation.individuals[x + 1]]
-                   for x in range(half_count)]
+                   for x in range(0, len(generation.individuals), 2)]
 
     elif method == PairingMethod.RANDOM:
         parents = set()
@@ -147,14 +148,13 @@ def pairing(generation: Generation, method: PairingMethod = PairingMethod.FITTES
 
 
 def mating(couple: [Individual], method: MatingMethod = MatingMethod.SINGLE_POINT):
-    offsprings = []
+    offsprings = copy.deepcopy(couple)
 
     if method == MatingMethod.SINGLE_POINT:
-        pivot_point = randint(1, len(couple[0].genes))
-        genotype0 = couple[0].genes
-        genotype1 = couple[1].genes
+        pivot_point = randint(1, len(offsprings[0].genes))
+        genotype0 = offsprings[0].genes
+        genotype1 = offsprings[1].genes
         genotype0[pivot_point:], genotype1[pivot_point:] = genotype1[pivot_point:], genotype0[pivot_point:]
-        offsprings = couple
 
     elif method == MatingMethod.TWO_POINTS:
         pivot_points = sample(range(1, len(couple[0])), 2)
@@ -162,10 +162,9 @@ def mating(couple: [Individual], method: MatingMethod = MatingMethod.SINGLE_POIN
             couple[1][pivot_points[0]:], couple[0][pivot_points[0]:]
         couple[0][:pivot_points[1]], couple[1][:pivot_points[1]] = \
             couple[1][:pivot_points[1]], couple[0][:pivot_points[1]]
-        offsprings = couple
 
     elif method == MatingMethod.RANDOM:
-        offsprings = [zip(shuffle(gen_pair for gen_pair in zip(individual.genes for individual in couple)))]
+        offsprings = [zip(shuffle(gen_pair for gen_pair in zip(individual.genes for individual in offsprings)))]
 
     return offsprings
 
@@ -193,18 +192,16 @@ def next_generation(generation: Generation, lower_limit, upper_limit) -> Generat
     selected = selection(generation)
 
     parents = pairing(selected)
+
     offsprings = [[[mating(parents[x])
                     for x in range(len(parents))]
                    [y][z] for z in range(2)]
                   for y in range(len(parents))]
-    offsprings1 = [offsprings[x][0]
-                   for x in range(len(parents))]
-    offsprings2 = [offsprings[x][1]
-                   for x in range(len(parents))]
+    offsprings = [individual for couple in offsprings for individual in couple]
 
-    unmutated = [member.individual for member in selected] + offsprings1 + offsprings2
+    unmutated = [member.individual for member in selected] + offsprings
 
-    mutated = Generation([mutation(unmutated_member, lower_limit, upper_limit) for unmutated_member in unmutated])
+    mutated = Generation([mutation(unmutated_member, lower_limit, upper_limit, 1) for unmutated_member in unmutated])
     mutated.append(elite_member)
     mutated.calc_fitness()
     mutated.sort(key=lambda member: member.fitness)
@@ -225,20 +222,20 @@ def fitness_similarity_check(max_fitness, number_of_similarity):
 # Generations and fitness values will be written to this file
 Result_file = 'GA_Results.txt'  # Creating the First Generation
 
-generations = [Generation.initialize_generation(20, 4, 0, 10)]
+generations = [Generation.initialize_generation(21, 4, 0, 10)]
 fitness_average = [np.average(generations[0].fitnesses)]
 fitness_max = [np.max(generations[0].fitnesses)]
 
-res = open(Result_file, 'a')
-res.write(f'\n{generations[0].fitnesses}\t{max(fitness_average)}\t{max(fitness_max)}')
+res = open(Result_file, 'w')
+res.write(f'\n{len(generations)}\t{max(fitness_average)}\t{max(fitness_max)}\t{generations[0].fitnesses}')
 res.close()
 
 while True:
-    if max(fitness_max) > 60:
+    if max(fitness_max) == 40:
         break
-    if max(fitness_average) > 50:
+    if max(fitness_average) > 35:
         break
-    if fitness_similarity_check(fitness_max, 50):
+    if fitness_similarity_check(fitness_max, 20):
         break
     generations.append(next_generation(generations[-1], 0, 10))
 
@@ -246,6 +243,6 @@ while True:
     fitness_max.append(np.max(generations[-1].fitnesses))
 
     res = open(Result_file, 'a')
-    ans = f'\n{generations[-1].fitnesses}\t{max(fitness_average)}\t{max(fitness_max)}'
+    ans = f'\n{len(generations)}\t{max(fitness_average)}\t{max(fitness_max)}\t{generations[-1].fitnesses}'
     res.write(ans)
     res.close()

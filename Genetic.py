@@ -3,16 +3,16 @@ from __future__ import annotations
 import copy
 from collections import UserList
 from enum import Enum
-from random import gauss, sample, choices, shuffle
+from random import gauss, sample, choices, shuffle, uniform
 from typing import Callable, Collection, Union
 
 import numpy as np
-from numpy.random import randint
-from numpy import clip
 from matplotlib import pyplot as plt
-import matplotlib as mpl
+from matplotlib import use
+from numpy import clip
+from numpy.random import randint
 
-mpl.use('TkAgg')
+use('TkAgg')
 
 Num = Union[int, float]
 
@@ -53,7 +53,7 @@ class Individual:
         return individual
 
     def fill(self, number_of_genes, lower_limit, upper_limit):
-        self.genes = [randint(lower_limit, upper_limit) for x in range(number_of_genes)]
+        self.genes = [uniform(lower_limit, upper_limit) for x in range(number_of_genes)]
 
     def copy(self) -> Individual:
         new = Individual()
@@ -66,9 +66,6 @@ class GenerationMember:
         self.individual = individual
         self.fitness = None
 
-    def __get__(self, instance, owner):
-        return instance
-
 
 class Generation(UserList):
     def __init__(self, individuals: [Individual] = None, fitness_function: Callable[[Collection], Num] = sum):
@@ -76,7 +73,8 @@ class Generation(UserList):
         self.data = [GenerationMember(individual) for individual in individuals]
         self._fitness_function = fitness_function
         self.calc_fitness()
-        self.sort(key=lambda member: member.fitness)
+        self.sort()
+
 
     @classmethod
     def initialize_generation(cls, number_of_individuals, number_of_genes, lower_limit, upper_limit) -> Generation:
@@ -105,6 +103,9 @@ class Generation(UserList):
     def fitnesses(self):
         return [member.fitness for member in self.data]
 
+    def sort(self):
+        UserList.sort(self, key=lambda member: member.fitness)
+
 
 def fitness_calculation(individual: Individual):
     return sum(individual.genes)
@@ -120,7 +121,7 @@ def selection(generation: Generation, method: SelectionMethod = SelectionMethod.
             new_population.add(choices(generation, weights=generation.fitnesses))
 
     elif method == SelectionMethod.FITNEST_HALF:
-        generation.data.sort(key=lambda member: member.fitness)
+        generation.sort()
         new_population.update(generation.individuals[half_count:])
 
     elif method == SelectionMethod.RANDOM:
@@ -182,11 +183,11 @@ def mutation(individual: Individual, lower_limit, upper_limit, mutation_rate=2,
     if method == MutationMethod.GAUSS:
         for x in gene_indexes:
             mutated_individual.genes[x] = \
-                clip(int(individual.genes[x] + gauss(0, standard_deviation)), lower_limit, upper_limit)
+                clip(individual.genes[x] + gauss(0, standard_deviation), lower_limit, upper_limit)
 
     if method == MutationMethod.RESET:
         for x in gene_indexes:
-            mutated_individual.genes[x] = round(randint(lower_limit, upper_limit), 1)
+            mutated_individual.genes[x] = uniform(lower_limit, upper_limit)
 
     return mutated_individual
 
@@ -211,7 +212,7 @@ def next_generation(generation: Generation, lower_limit, upper_limit, mutation_d
          unmutated_member in unmutated], generation.fitness_function)
     mutated.append(elite_member)
     mutated.calc_fitness()
-    mutated.sort(key=lambda member: member.fitness)
+    mutated.sort()
 
     return mutated
 
@@ -230,14 +231,17 @@ def run(generation_count=21,
         genes_count=4,
         lower_limit=0,
         upper_limit=10,
-        max_fitness_condition=39,
-        average_fitness_condition=35,
+        max_fitness_condition=39.,
+        average_fitness_condition=35.,
         similarity_length=20,
-        mutation_deviation=2,
+        mutation_deviation=2.,
         fitness_function=sum,
         result_file='GA_Results.txt'):
     first_generation = Generation.initialize_generation(generation_count, genes_count, lower_limit, upper_limit)
+
     first_generation.fitness_function = fitness_function
+    first_generation.calc_fitness()
+    first_generation.sort()
 
     generations = [first_generation]
     fitness_average = [np.average(generations[0].fitnesses)]
@@ -248,11 +252,9 @@ def run(generation_count=21,
     res.close()
 
     while True:
-        if max(fitness_max) > max_fitness_condition:
-            break
-        if max(fitness_average) > average_fitness_condition:
-            break
-        if fitness_similarity_check(fitness_max, similarity_length):
+        if max(fitness_max) > max_fitness_condition or \
+                max(fitness_average) > average_fitness_condition or \
+                fitness_similarity_check(fitness_max, similarity_length):
             break
         generations.append(next_generation(generations[-1], lower_limit, upper_limit, mutation_deviation))
 

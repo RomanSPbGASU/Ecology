@@ -9,6 +9,10 @@ from typing import Callable, Collection, Union
 import numpy as np
 from numpy.random import randint
 from numpy import clip
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+
+mpl.use('TkAgg')
 
 Num = Union[int, float]
 
@@ -260,5 +264,65 @@ def run(generation_count=21,
         res.write(ans)
         res.close()
 
+    plt.plot([np.average(generation.fitnesses) for generation in generations], color='#f12')
+    plt.plot([max(generation.fitnesses) for generation in generations], color='#38a')
+    plt.show()
 
-run(41, 20, -100, 100, 1950, 1900, 10, 20)
+    fig = plt.figure()
+    ax = plt.axes(projection="3d")
+
+    # X = np.arange(-2, 2, 0.1)
+    # Y = np.arange(-2, 2, 0.1)
+    # Z = surface([X[:, None], Y[None, :]])
+    #
+    # ax.plot_surface(X, Y, Z)
+
+    # x = np.linspace(0, 4, 10)
+    # y = np.linspace(-1, 1, 20)
+    #
+    # [X, Y] = np.meshgrid(x, y, indexing='ij', sparse='true')
+    #
+    def func(x, y):
+        return x * y / (x ** 2 + y ** 2 + 4)
+        # I have defined a function of x and y.
+
+    xs = np.linspace(-2, 2, 10)
+    ys = np.linspace(-1, 1, 20)
+    X, Y = np.meshgrid(xs, ys)
+    Z = np.fromiter(map(surface, [X.ravel(), Y.ravel()]), X.dtype).reshape(X.shape)
+    ax.plot_surface(X, Y, Z)
+
+    # z_line = np.linspace(0, 15, 1000)
+    # x_line = np.cos(z_line)
+    # y_line = np.sin(z_line)
+    # ax.plot3D(x_line, y_line, z_line, 'gray')
+    #
+    # z_points = 15 * np.random.random(100)
+    # x_points = np.cos(z_points) + 0.1 * np.random.randn(100)
+    # y_points = np.sin(z_points) + 0.1 * np.random.randn(100)
+    # ax.scatter3D(x_points, y_points, z_points, c=z_points, cmap='hsv');
+
+    plt.ion()
+    plt.show()
+
+
+def f(r, theta):
+    r /= 10
+    theta /= 2*np.pi
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    z = np.exp(-r) * np.cos(4 * x) * np.cos(4 * y)
+    return z
+
+
+def fitness_function(variables):
+    return surface(*variables)
+
+
+def surface(x1, x2) -> float:
+    x1 /= 50
+    x2 /= 50
+    return -((4 - 2.1 * x1 ** 2 + (x1 ** 4) / 3) * x1 ** 2 + x1 * x2 + (-4 + 4 * x2 ** 2) * x2 ** 2) * 50
+
+
+run(41, 2, -100, 100, 2000, 1995, 100, 20, fitness_function)

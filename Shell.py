@@ -23,8 +23,8 @@ b = 60 * h
 A = 1
 B = 1
 
-k_x= 1 / r
-k_y= 1 / r
+k_x = 1 / r
+k_y = 1 / r
 
 n = 2  # главный параметр для точности расчёта
 
@@ -105,7 +105,7 @@ print(U, V, W)
 theta_1 = -diff(W, x) / A - k_x * U
 theta_2 = -diff(W, y) / B - k_y * V
 
-epsilon_x = diff(U, x) / A + diff(A, y) * V / (A * B) - k_x * W + 1 / 2 * theta_1  **  2
+epsilon_x = diff(U, x) / A + diff(A, y) * V / (A * B) - k_x * W + 1 / 2 * theta_1 ** 2
 epsilon_y = diff(V, y) / B + diff(B, x) * U / (A * B) - k_y * W + 1 / 2 * theta_2 ** 2
 
 gammax_y = diff(V, x) / A + diff(U, y) / B - diff(A, y) * U / (A * B) - diff(B, x) * V / (A * B) + theta_1 * theta_2
@@ -113,35 +113,36 @@ gammax_y = diff(V, x) / A + diff(U, y) / B - diff(A, y) * U / (A * B) - diff(B, 
 gamma_xz = k * distributed_stress(z)(Psi_x - theta_1)
 gamma_yz = k * distributed_stress(z)(Psi_y - theta_2)
 
-varkappa_1 = diff(Psix, x)/A + diff(A, y)*Psiy/(A*B)
-varkappa_2 = diff(Psiy, y)/B + diff(B, x)*Psix/(A*B)
+kappa_1 = diff(Psi_x, x) / A + diff(A, y) * Psi_y / (A * B)
+kappa_2 = diff(Psi_y, y) / B + diff(B, x) * Psi_x / (A * B)
 
-varkappa_12 = 1/2*(diff(Psiy, x)/A + diff(Psix, y)/B - (diff(A, y)*Psi_x+ diff(B, x)*Psiy)/(A*B))
+kappa_12 = 1 / 2 * (diff(Psi_y, x) / A + diff(Psi_x, y) / B - (diff(A, y) * Psi_x + diff(B, x) * Psi_y) / (A * B))
 
+M_x = E_1 * h ** 3 / 12 * (mu_21 * kappa_2 + kappa_1) / (-mu_12 * mu_21 + 1)
+M_y = E_2 * h ** 3 / 12 * (mu_12 * kappa_1 + kappa_2) / (-mu_12 * mu_21 + 1)
+M_xy = G_12 * h ** 3 / 6 * kappa_12
+M_yx = G_12 * h ** 3 / 6 * kappa_12
+N_x = E_1 * h * (mu_21 * epsilon_y + epsilon_x) / (-mu_12 * mu_21 + 1)
+N_y = E_2 * h * (mu_12 * epsilon_x + epsilon_y) / (-mu_12 * mu_21 + 1)
+N_xy = G_12 * h * gammax_y
+N_yx = G_12 * h * gammax_y
 
-M_x= E_1*h ** 3/12*(mu_21*varkappa_2 + varkappa_1)/(-mu_12*mu_21 + 1)
-M_y= E_2*h ** 3/12*(mu_12*varkappa_1 + varkappa_2)/(-mu_12*mu_21 + 1)
-Mx_y= G_12*h ** 3/6*varkappa_12
-My_x= G_12*h ** 3/6*varkappa_12
-N_x= E_1*h*(mu_21*epsilony` + `&varepsilonx)/(-mu_12*mu_21 + 1)
-N_y= E_2*h*(mu_12*epsilonx` + `&varepsilony)/(-mu_12*mu_21 + 1)
-
-Nx_y= G_12*h*gammax_yNy_x= G_12*h*gammax_yP_x= 0
-P_y= 0
-Q_x= G_13*k*h*(Psi_x- theta_1)
-Q_y= G_23*k*h*(Psi_y- theta_2)
-
-Q_ytime() - st
-Ep = 1/2*ApproximateInt(ApproximateInt((Nx*epsilonx` + Ny*`&varepsilony` + 1/2*(Nx_y+ Nyx)*`&gammax_y+ Mx*varkappa_1 + My*varkappa_2 + (Mx_y+ Myx)*varkappa_12 + Qx*(Psi_x- theta_1) + Qy*(Psi_y- theta_2))*A*B, y = 0 .. b, method = simpson), x = a_1 .. a, method = simpson)
+P_x = 0
+P_y = 0
+Q_x = G_13 * k * h * (Psi_x - theta_1)
+Q_y = G_23 * k * h * (Psi_y - theta_2)
 
 
-time() - st
+
+Ep = 1/2 * ApproximateInt(ApproximateInt((Nx*epsilonx` + Ny*`&varepsilony` + 1/2*(N_xy+ Nyx)*`&gammax_y+ Mx*kappa_1 + My*kappa_2 + (M_xy+ Myx)*kappa_12 + Qx*(Psi_x- theta_1) + Qy*(Psi_y- theta_2))*A*B, y = 0 .. b, method = simpson), x = a_1 .. a, method = simpson)
+
+
+
 AA = ApproximateInt(ApproximateInt((Px*U + Py*V + W*q)*A*B, y = 0 .. b, method = simpson), x = a_1 .. a, method = simpson)
 Ep = Ep
 AA = AA
-time() - st
+
 Es = Ep - AA
-time() - st
 
 k = 0
 for i to n do

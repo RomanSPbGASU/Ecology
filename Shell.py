@@ -27,7 +27,7 @@ B = 1
 k_x = 1 / r
 k_y = 1 / r
 
-n = 2  # главный параметр для точности расчёта
+n = 1  # главный параметр для точности расчёта
 
 N = n ** 2
 
@@ -36,12 +36,12 @@ G_13 = 0.33 * 10 ** 5
 G_23 = 0.33 * 10 ** 5
 
 Jacobi_1 = [None] * 5 * N
-Deter_1 = [[None] * 5 * N] * 5 * N
+Deter_1 = [[None] * 5 * N for _ in range(5 * N)]
 
 Jacobi = [None] * 5 * N
-Deter = [[None] * 5 * N] * 5 * N
+Deter = [[None] * 5 * N for _ in range(5 * N)]
 
-Hq = [[None] * 5 * N] * 5 * N
+Hq = [[None] * 5 * N for _ in range(5 * N)]
 GG = [None] * 5 * N
 
 x, y = symbols('x y')
@@ -101,13 +101,13 @@ psi_y = symbols(f'u:{n}:{n}')
 
 for i in range(n):
     for j in range(n):
-        U = U + u[i*j] * X_1(i) * Y_1(j)
-        V = V + v[i*j] * X_2(i) * Y_2(j)
-        W = W + w[i*j] * X_3(i) * Y_3(j)
-        Psi_x = Psi_x + psi_x[i*j] * X_4(i) * Y_4(i)
-        Psi_y = Psi_y + psi_y[i*j] * X_5(i) * Y_5(i)
+        U = U + u[i * j] * X_1(i) * Y_1(j)
+        V = V + v[i * j] * X_2(i) * Y_2(j)
+        W = W + w[i * j] * X_3(i) * Y_3(j)
+        Psi_x = Psi_x + psi_x[i * j] * X_4(i) * Y_4(i)
+        Psi_y = Psi_y + psi_y[i * j] * X_5(i) * Y_5(i)
 
-print(U, '\n\n', V, '\n\n', W)
+# print(U, '\n\n', V, '\n\n', W)
 
 theta_1 = -diff(W, x) / A - k_x * U
 theta_2 = -diff(W, y) / B - k_y * V
@@ -154,89 +154,86 @@ Es = Ep - AA
 k = 0
 for i in range(n):
     for j in range(n):
+        Jacobi[k] = diff(Es, u[i * j])
+        Jacobi[k + N] = diff(Es, v[i * j])
+        Jacobi[k + 2 * N] = diff(Es, w[i * j])
+        Jacobi[k + 3 * N] = diff(Es, psi_x[i * j])
+        Jacobi[k + 4 * N] = diff(Es, psi_y[i * j])
         k += 1
-        Jacobi[k] = diff(Es, u[i*j])
-        Jacobi[k + N] = diff(Es, v[i*j])
-        Jacobi[k + 2 * N] = diff(Es, w[i*j])
-        Jacobi[k + 3 * N] = diff(Es, psi_x[i*j])
-        Jacobi[k + 4 * N] = diff(Es, psi_y[i*j])
 
-for l in range(5 * N):
+for t in range(5 * N):
     k = 0
     for i in range(n):
         for j in range(n):
-            k = k + 1
-            Deter[l][k] = diff(Jacobi[l], u[i*j])
-            Deter[l][k + N] = diff(Jacobi[l], v[i*j])
-            Deter[l][k + 2 * N] = diff(Jacobi[l], w[i*j])
-            Deter[l][k + 3 * N] = diff(Jacobi[l], psi_x[i*j])
-            Deter[l][k + 4 * N] = diff(Jacobi[l], psi_y[i*j])
+            Deter[t][k] = diff(Jacobi[t], u[i * j])
+            Deter[t][k + N] = diff(Jacobi[t], v[i * j])
+            Deter[t][k + 2 * N] = diff(Jacobi[t], w[i * j])
+            Deter[t][k + 3 * N] = diff(Jacobi[t], psi_x[i * j])
+            Deter[t][k + 4 * N] = diff(Jacobi[t], psi_y[i * j])
+            k += 1
 
-Prob_3 = [[] * 5 * N] * 5 * N
+Prob_3 = [[None] * 5 * N for _ in range(5 * N)]
 
 MAX = 320
-epsillon = 10 ** (-5)
-delq = 0.01
+epsilon = 10 ** (-5)
+delta_q = 0.01
 qq = 0
 BufV = [] * 5 * N
 Buf = [] * 5 * N
-Coef = [] * 5 * N
+Coef = [0] * 5 * N
 
-for l in range(5 * N):
-    Coef[l] = 0
-
-AnsMatr = [[] * MAX] * 5 * N
+AnswerMatrix = [[None] * MAX for _ in range(5 * N)]
 
 for p in range(MAX):
     delta = 0
     for m in range(100):
-        if delta <= epsillon:
+        if delta <= epsilon:
             break
 
-        for l in range(5 * N):
-            Buf[l] = Coef[l]
+        for t in range(5 * N):
+            Buf[t] = Coef[t]
 
         k = 0
 
         for i in range(n):
             for j in range(n):
                 k = k + 1
-                u[i*j] = Coef[k]
-                v[i*j] = Coef[k + N]
-                w[i*j] = Coef[k + 2 * N]
-                psi_x[i*j] = Coef[k + 3 * N]
-                psi_y[i*j] = Coef[k + 4 * N]
+                u[i * j] = Coef[k]
+                v[i * j] = Coef[k + N]
+                w[i * j] = Coef[k + 2 * N]
+                psi_x[i * j] = Coef[k + 3 * N]
+                psi_y[i * j] = Coef[k + 4 * N]
 
         for i in range(5 * N):
             for j in range(5 * N):
                 Jacobi_1[i] = Jacobi[i].subs(q, qq)
-                Deter_1[i*j] = Deter[i*j].subs(q, qq)
+                Deter_1[i * j] = Deter[i * j].subs(q, qq)
 
-            for l in range(5 * N):
-                Buf[l] = Coef[l]
+            for t in range(5 * N):
+                Buf[t] = Coef[t]
 
             Rans = Deter_1 ** -1 * Jacobi_1
 
-            for l in range(5 * N):
-                Coef[l] = (Buf[l] - Rans[l]).evalf()
+            for t in range(5 * N):
+                Coef[t] = (Buf[t] - Rans[t]).evalf()
 
             delta = abs((BufV[1] - Coef[1]).evalf())
 
-            for l in range(5 * N):
-                if abs((BufV[l] - Coef[l]).evalf()) > delta:
-                    delta = abs((BufV[l] - Coef[l]).evalf())
+            for t in range(5 * N):
+                if abs((BufV[t] - Coef[t]).evalf()) > delta:
+                    delta = abs((BufV[t] - Coef[t]).evalf())
 
-        for l in range(5 * N):
-            AnsMatr[p][l + 1] = Coef[l]
+        for t in range(5 * N):
+            AnswerMatrix[p][t + 1] = Coef[t]
 
-        AnsMatr[p][1] = qq
-        AnsMatr[p][2] = W.subs([(x, a / 2), (y, b / 2)])
-        AnsMatr[p][3] = W.subs([(x, a / 4), (y, b / 4)])
-        qq = qq + delq
+        AnswerMatrix[p][1] = qq
+        AnswerMatrix[p][2] = W.subs([(x, a / 2), (y, b / 2)])
+        AnswerMatrix[p][3] = W.subs([(x, a / 4), (y, b / 4)])
+        qq = qq + delta_q
 
-    AnsMatr.evalm()
+    AnswerMatrix.evalm()
 
-Matrix = AnsMatr
+Matrix = AnswerMatrix
 
 # A = list(zip(*Matrix2))[:2]
 # A = A[1], A[0]

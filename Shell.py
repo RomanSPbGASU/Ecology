@@ -27,7 +27,7 @@ B = 1
 k_x = 1 / r
 k_y = 1 / r
 
-n = 1  # главный параметр для точности расчёта
+n = 2  # главный параметр для точности расчёта
 
 N = n ** 2
 
@@ -107,7 +107,7 @@ for i in range(n):
         Psi_x = Psi_x + psi_x[i*j] * X_4(i) * Y_4(i)
         Psi_y = Psi_y + psi_y[i*j] * X_5(i) * Y_5(i)
 
-print(U, V, W)
+print(U, '\n\n', V, '\n\n', W)
 
 theta_1 = -diff(W, x) / A - k_x * U
 theta_2 = -diff(W, y) / B - k_y * V

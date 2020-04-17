@@ -215,48 +215,40 @@ for p in range(MAX):
         for l in range(5 * N):
             Coef[l] = evalf(Buf[l] - Rans[l])
 
-        delta = abs(evalf(BufV[l] - Coef[l]))
+A = list(zip(*Matrix2))[:2]
+A = A[1], A[0]
+B = list(zip(*Matrix2))[0:3:2]
+B = B[1], B[0]
 
-        for l in range(5 * N):
-            if abs(evalf(BufV[l] - Coef[l])) > delta:
-                delta = abs(evalf(BufV[l] - Coef[l]))
+C = list(zip(*Matrix))[:2]
+C = C[1], C[0]
+D = list(zip(*Matrix))[0:3:2]
+D = D[1], D[0]
 
-    for l in range(5*N):
-        AnsMatr[p, l + 1] = Coef[l]
+figure, axes = plt.subplots(2, 2)
 
-    AnsMatr[p][1] = qq
-    AnsMatr[p][2] = subs({x = a / 2, y = b / 2}, W)
-    AnsMatr[p][3] = subs({x = a / 4, y = b / 4}, W)
-    qq = qq + delq
+axes[0, 0].plot(*A, '.,', color='#f12', linewidth=11)
+axes[0, 0].plot(*B, '.,', color='#38a', linewidth=11)
+axes[0, 0].set(ylabel='q, МПа', xlabel='W, м')
+axes[0, 0].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+axes[0, 0].grid(color='black', linestyle=':', linewidth=0.2)
 
+axes[0, 1].plot(*C, color='#f12')
+axes[0, 1].plot(*D, color='#38a')
+axes[0, 1].set(ylabel='q, МПа', xlabel='W, м')
+axes[0, 1].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+axes[0, 1].grid(color='black', linestyle=':', linewidth=0.2)
 
-evalm(AnsMatr)
+axes[1, 0].plot(*A, color='#f12')
+axes[1, 0].plot(*C, color='#38a')
+axes[1, 0].set(ylabel='q, МПа', xlabel='W, м')
+axes[1, 0].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+axes[1, 0].grid(color='black', linestyle=':', linewidth=0.2)
 
+axes[1, 1].plot(*B, color='#f12')
+axes[1, 1].plot(*D, color='#38a')
+axes[1, 1].set(ylabel='q, МПа', xlabel='W, м')
+axes[1, 1].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+axes[1, 1].grid(color='black', linestyle=':', linewidth=0.2)
 
-# figure, ax = plt.subplots()
-# ax.plot(X, analytic_result, color='#f12')
-# ax.plot(X, transposed_result, color='#38a')
-# ax.set(ylabel='q, МПа', xlabel='W, м')
-# ax.legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
-# figure.show()
-#
-#
-# gr_3 = pointplot([seq([AnsMatr[i, 2], AnsMatr[i, 1]], i=1..MAX)], color=ffc600, symbol=soliddiamond, symbolsize=15,
-#                  axis=[gridlines = [10, color = black]])
-#
-#
-#
-# gr_4 = pointplot([seq([AnsMatr[i, 3], AnsMatr[i, 1]], i=1..MAX)], color="Teal", symbol=soliddiamond, symbolsize=15,
-#                  axis=[gridlines = [10, color = black]], labels = ["W, м", "q, МПа"], legend = "W(a/4, b/4)")
-#
-# print(display([gr_3, gr_4]))
-#
-# gr_3 = pointplot(
-#     [seq([AnsMatr[i, 2], AnsMatr[i, 1]], i=290.. 300)], color = ffc600, symbol = soliddiamond, symbolsize = 25, axis = [
-#     gridlines = [10, color = black]], labels = ["W", "q"], legend = "W(a/2, b/2)")
-# gr_4 = pointplot(
-#     [seq([AnsMatr[i, 3], AnsMatr[i, 1]], i=290.. 300)], color = "Teal", symbol = soliddiamond, symbolsize = 25, axis = [
-#     gridlines = [10, color = black]], labels = ["W", "q"], legend = "W(a/4, b/4)")
-#
-# print(display([gr_3, gr_4]))
-# print(display(plot3d()))
+figure.show()

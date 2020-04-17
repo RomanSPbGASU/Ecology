@@ -151,27 +151,6 @@ AA = AA
 
 Es = Ep - AA
 
-k = 0
-for i in range(n):
-    for j in range(n):
-        Jacobi[k] = diff(Es, u[i * j])
-        Jacobi[k + N] = diff(Es, v[i * j])
-        Jacobi[k + 2 * N] = diff(Es, w[i * j])
-        Jacobi[k + 3 * N] = diff(Es, psi_x[i * j])
-        Jacobi[k + 4 * N] = diff(Es, psi_y[i * j])
-        k += 1
-
-for t in range(5 * N):
-    k = 0
-    for i in range(n):
-        for j in range(n):
-            Deter[t][k] = diff(Jacobi[t], u[i * j])
-            Deter[t][k + N] = diff(Jacobi[t], v[i * j])
-            Deter[t][k + 2 * N] = diff(Jacobi[t], w[i * j])
-            Deter[t][k + 3 * N] = diff(Jacobi[t], psi_x[i * j])
-            Deter[t][k + 4 * N] = diff(Jacobi[t], psi_y[i * j])
-            k += 1
-
 Prob_3 = [[None] * 5 * N for _ in range(5 * N)]
 
 MAX = 320
@@ -194,15 +173,25 @@ for p in range(MAX):
             Buf[t] = Coef[t]
 
         k = 0
-
         for i in range(n):
             for j in range(n):
-                u[i * j] = Coef[k]
-                v[i * j] = Coef[k + N]
-                w[i * j] = Coef[k + 2 * N]
-                psi_x[i * j] = Coef[k + 3 * N]
-                psi_y[i * j] = Coef[k + 4 * N]
-                k = k + 1
+                Jacobi[k] = diff(Es, u[i * j]).subs(u[i * j], Coef[k])
+                Jacobi[k + N] = diff(Es, v[i * j]).subs(u[i * j], Coef[k + N])
+                Jacobi[k + 2 * N] = diff(Es, w[i * j]).subs(u[i * j], Coef[k + 2 * N])
+                Jacobi[k + 3 * N] = diff(Es, psi_x[i * j]).subs(u[i * j], Coef[k + 3 * N])
+                Jacobi[k + 4 * N] = diff(Es, psi_y[i * j]).subs(u[i * j], Coef[k + 4 * N])
+                k += 1
+
+        for t in range(5 * N):
+            k = 0
+            for i in range(n):
+                for j in range(n):
+                    Deter[t][k] = diff(Jacobi[t], u[i * j]).subs(u[i * j], Coef[k])
+                    Deter[t][k + N] = diff(Jacobi[t], v[i * j]).subs(v[i * j], Coef[k + N])
+                    Deter[t][k + 2 * N] = diff(Jacobi[t], w[i * j]).subs(w[i * j], Coef[k + 2 * N])
+                    Deter[t][k + 3 * N] = diff(Jacobi[t], psi_x[i * j]).subs(psi_x[i * j], Coef[k + 3 * N])
+                    Deter[t][k + 4 * N] = diff(Jacobi[t], psi_y[i * j]).subs(psi_y[i * j], Coef[k + 4 * N])
+                    k += 1
 
         for i in range(5 * N):
             for j in range(5 * N):

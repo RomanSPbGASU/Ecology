@@ -93,25 +93,19 @@ W = 0
 Psi_x = 0
 Psi_y = 0
 
-u = [[None] * n] * n
-v = [[None] * n] * n
-w = [[None] * n] * n
-psi_x = [[None] * n] * n
-psi_y = [[None] * n] * n
+u = symbols(f'u:{n}:{n}')
+v = symbols(f'u:{n}:{n}')
+w = symbols(f'u:{n}:{n}')
+psi_x = symbols(f'u:{n}:{n}')
+psi_y = symbols(f'u:{n}:{n}')
 
 for i in range(n):
     for j in range(n):
-        u[i][j] = symbols(f'u{i}{j}')
-        v[i][j] = symbols(f'v{i}{j}')
-        w[i][j] = symbols(f'w{i}{j}')
-        psi_x[i][j] = symbols(f'psi_x{i}{j}')
-        psi_y[i][j] = symbols(f'psi_y{i}{j}')
-
-        U = U + u[i][j] * X_1(i) * Y_1(j)
-        V = W + v[i][j] * X_2(i) * Y_2(j)
-        W = W + w[i][j] * X_3(i) * Y_3(j)
-        Psi_x = Psi_x + psi_x[i][j] * X_4(i) * Y_4(i)
-        Psi_y = Psi_y + psi_y[i][j] * X_5(i) * Y_5(i)
+        U = U + u[i*j] * X_1(i) * Y_1(j)
+        V = V + v[i*j] * X_2(i) * Y_2(j)
+        W = W + w[i*j] * X_3(i) * Y_3(j)
+        Psi_x = Psi_x + psi_x[i*j] * X_4(i) * Y_4(i)
+        Psi_y = Psi_y + psi_y[i*j] * X_5(i) * Y_5(i)
 
 print(U, V, W)
 
@@ -161,22 +155,22 @@ k = 0
 for i in range(n):
     for j in range(n):
         k += 1
-        Jacobi[k] = diff(Es, u[i][j])
-        Jacobi[k + N] = diff(Es, v[i][j])
-        Jacobi[k + 2 * N] = diff(Es, w[i][j])
-        Jacobi[k + 3 * N] = diff(Es, psi_x[i][j])
-        Jacobi[k + 4 * N] = diff(Es, psi_y[i][j])
+        Jacobi[k] = diff(Es, u[i*j])
+        Jacobi[k + N] = diff(Es, v[i*j])
+        Jacobi[k + 2 * N] = diff(Es, w[i*j])
+        Jacobi[k + 3 * N] = diff(Es, psi_x[i*j])
+        Jacobi[k + 4 * N] = diff(Es, psi_y[i*j])
 
 for l in range(5 * N):
     k = 0
     for i in range(n):
         for j in range(n):
             k = k + 1
-            Deter[l][k] = diff(Jacobi[l], u[i][j])
-            Deter[l][k + N] = diff(Jacobi[l], v[i][j])
-            Deter[l][k + 2 * N] = diff(Jacobi[l], w[i][j])
-            Deter[l][k + 3 * N] = diff(Jacobi[l], psi_x[i][j])
-            Deter[l][k + 4 * N] = diff(Jacobi[l], psi_y[i][j])
+            Deter[l][k] = diff(Jacobi[l], u[i*j])
+            Deter[l][k + N] = diff(Jacobi[l], v[i*j])
+            Deter[l][k + 2 * N] = diff(Jacobi[l], w[i*j])
+            Deter[l][k + 3 * N] = diff(Jacobi[l], psi_x[i*j])
+            Deter[l][k + 4 * N] = diff(Jacobi[l], psi_y[i*j])
 
 Prob_3 = [[] * 5 * N] * 5 * N
 
@@ -207,16 +201,16 @@ for p in range(MAX):
         for i in range(n):
             for j in range(n):
                 k = k + 1
-                u[i][j] = Coef[k]
-                v[i][j] = Coef[k + N]
-                w[i][j] = Coef[k + 2 * N]
-                psi_x[i][j] = Coef[k + 3 * N]
-                psi_y[i][j] = Coef[k + 4 * N]
+                u[i*j] = Coef[k]
+                v[i*j] = Coef[k + N]
+                w[i*j] = Coef[k + 2 * N]
+                psi_x[i*j] = Coef[k + 3 * N]
+                psi_y[i*j] = Coef[k + 4 * N]
 
         for i in range(5 * N):
             for j in range(5 * N):
                 Jacobi_1[i] = Jacobi[i].subs(q, qq)
-                Deter_1[i][j] = Deter[i][j].subs(q, qq)
+                Deter_1[i*j] = Deter[i*j].subs(q, qq)
 
             for l in range(5 * N):
                 Buf[l] = Coef[l]

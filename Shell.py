@@ -1,5 +1,5 @@
 import numpy as np
-from sympy import symbols, diff, integrate, sin, cos, pi
+from sympy import symbols, diff, integrate, sin, cos, pi, S
 from sympy.integrals.quadrature import gauss_legendre
 from matplotlib import pyplot as plt
 
@@ -178,14 +178,14 @@ MAX = 320
 epsilon = 10 ** (-5)
 delta_q = 0.01
 qq = 0
-BufV = [] * 5 * N
-Buf = [] * 5 * N
+BufV = [None] * 5 * N
+Buf = [None] * 5 * N
 Coef = [0] * 5 * N
 
 AnswerMatrix = [[None] * MAX for _ in range(5 * N)]
 
 for p in range(MAX):
-    delta = 0
+    delta = 1
     for m in range(100):
         if delta <= epsilon:
             break
@@ -197,12 +197,12 @@ for p in range(MAX):
 
         for i in range(n):
             for j in range(n):
-                k = k + 1
                 u[i * j] = Coef[k]
                 v[i * j] = Coef[k + N]
                 w[i * j] = Coef[k + 2 * N]
                 psi_x[i * j] = Coef[k + 3 * N]
                 psi_y[i * j] = Coef[k + 4 * N]
+                k = k + 1
 
         for i in range(5 * N):
             for j in range(5 * N):
@@ -231,7 +231,7 @@ for p in range(MAX):
         AnswerMatrix[p][3] = W.subs([(x, a / 4), (y, b / 4)])
         qq = qq + delta_q
 
-    AnswerMatrix.evalm()
+    # AnswerMatrix.evalm()
 
 Matrix = AnswerMatrix
 

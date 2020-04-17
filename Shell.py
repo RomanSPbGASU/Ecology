@@ -1,10 +1,8 @@
 import numpy as np
 from math import *
-from sympy import *
+from sympy import symbols, diff, integrate
 from sympy.integrals.quadrature import gauss_legendre
 from matplotlib import pyplot as plt
-
-
 
 E_1 = 2.1 * 10 ** 5
 E_2 = 2.1 * 10 ** 5
@@ -38,14 +36,14 @@ G_12 = 0.33 * 10 ** 5
 G_13 = 0.33 * 10 ** 5
 G_23 = 0.33 * 10 ** 5
 
-Jacobi_1 = [] * 5 * N
-Deter_1 = [[] * 5 * N] * 5 * N
+Jacobi_1 = [None] * 5 * N
+Deter_1 = [[None] * 5 * N] * 5 * N
 
-Jacobi = [] * 5 * N
-Deter = [[] * 5 * N] * 5 * N
+Jacobi = [None] * 5 * N
+Deter = [[None] * 5 * N] * 5 * N
 
-Hq = [[] * 5 * N] * 5 * N
-GG = [] * 5 * N
+Hq = [[None] * 5 * N] * 5 * N
+GG = [None] * 5 * N
 
 x, y = symbols('x y')
 
@@ -96,11 +94,11 @@ W = 0
 Psi_x = 0
 Psi_y = 0
 
-u = []
-v = []
-w = []
-psi_x = []
-psi_y = []
+u = [[None] * n] * n
+v = [[None] * n] * n
+w = [[None] * n] * n
+psi_x = [[None] * n] * n
+psi_y = [[None] * n] * n
 
 for i in range(n):
     for j in range(n):
@@ -109,12 +107,12 @@ for i in range(n):
         w[i][j] = symbols(f'w{i}{j}')
         psi_x[i][j] = symbols(f'psi_x{i}{j}')
         psi_y[i][j] = symbols(f'psi_y{i}{j}')
-        
+
         U = U + u[i][j] * X_1(i) * Y_1(j)
         V = W + v[i][j] * X_2(i) * Y_2(j)
         W = W + w[i][j] * X_3(i) * Y_3(j)
-        Psi_x = Psi_x + psi_x[i][j] + X_4(i) * Y_4(i)
-        Psi_y = Psi_y + psi_y[i][j] + X_5(i) * Y_5(i)
+        Psi_x = Psi_x + psi_x[i][j] * X_4(i) * Y_4(i)
+        Psi_y = Psi_y + psi_y[i][j] * X_5(i) * Y_5(i)
 
 print(U, V, W)
 
@@ -150,7 +148,8 @@ Q_y = G_23 * k * h * (Psi_y - theta_2)
 
 Ep = 1 / 2 * integrate(integrate(
     (N_x * epsilon_x + N_y * epsilon_y + 1 / 2 * (N_xy + N_yx) * gammax_y + M_x * kappa_1 + M_y * kappa_2 + (
-            M_xy + M_yx) * kappa_12 + Q_x * (Psi_x - theta_1) + Q_y * (Psi_y - theta_2)) * A * B, (y, 0, b)), (x, a_1, a))
+            M_xy + M_yx) * kappa_12 + Q_x * (Psi_x - theta_1) + Q_y * (Psi_y - theta_2)) * A * B, (y, 0, b)),
+    (x, a_1, a))
 
 q = symbols('q')
 AA = integrate(integrate((P_x * U + P_y * V + W * q) * A * B, (y, 0, b)), (x, a_1, a))

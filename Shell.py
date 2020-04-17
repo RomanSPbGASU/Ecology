@@ -110,8 +110,8 @@ epsilon_y = diff(V, y) / B + diff(B, x) * U / (A * B) - k_y * W + 1 / 2 * theta_
 
 gammax_y = diff(V, x) / A + diff(U, y) / B - diff(A, y) * U / (A * B) - diff(B, x) * V / (A * B) + theta_1 * theta_2
 
-gamma_xz = k * distributed_stress(z)(Psi_x - theta_1)
-gamma_yz = k * distributed_stress(z)(Psi_y - theta_2)
+gamma_xz = k * distributed_stress(z)*(Psi_x - theta_1)
+gamma_yz = k * distributed_stress(z)*(Psi_y - theta_2)
 
 kappa_1 = diff(Psi_x, x) / A + diff(A, y) * Psi_y / (A * B)
 kappa_2 = diff(Psi_y, y) / B + diff(B, x) * Psi_x / (A * B)
@@ -132,32 +132,41 @@ P_y = 0
 Q_x = G_13 * k * h * (Psi_x - theta_1)
 Q_y = G_23 * k * h * (Psi_y - theta_2)
 
+Ep = 1 / 2 * ApproximateInt(ApproximateInt(
+    (N_x * epsilon_x + N_y * epsilon_y + 1 / 2 * (N_xy + N_yx) * gammax_y + M_x * kappa_1 + M_y * kappa_2 + (
+            M_xy + M_yx) * kappa_12 + Q_x * (Psi_x - theta_1) + Q_y * (Psi_y - theta_2)) * A * B, y=0..b,
+    method=simpson), x=a_1..a, method=simpson)
 
-
-Ep = 1/2 * ApproximateInt(ApproximateInt((Nx*epsilonx` + Ny*`&varepsilony` + 1/2*(N_xy+ Nyx)*`&gammax_y+ Mx*kappa_1 + My*kappa_2 + (M_xy+ Myx)*kappa_12 + Qx*(Psi_x- theta_1) + Qy*(Psi_y- theta_2))*A*B, y = 0 .. b, method = simpson), x = a_1 .. a, method = simpson)
-
-
-
-AA = ApproximateInt(ApproximateInt((Px*U + Py*V + W*q)*A*B, y = 0 .. b, method = simpson), x = a_1 .. a, method = simpson)
+AA = ApproximateInt(ApproximateInt((P_x * U + P_y * V + W * q) * A * B, y=0..b, method=simpson), x=a_1..a, method=simpson)
 Ep = Ep
 AA = AA
 
 Es = Ep - AA
 
 k = 0
-for i to n do
-    for j to n do k = k + 1 Jacobi[k] = diff(Es, cat(u, i, j)) Jacobi[k + N] = diff(Es, cat(v, i, j)) Jacobi[k + 2*N] = diff(Es, cat(w, i, j)) Jacobi[k + 3*N] = diff(Es, cat(psix`, i, j)) Jacobi[k + 4*N] = diff(Es, cat(`&psiy, i, j)) end do
-end do
-Jacobi[1]
-for l to 5*N do
+for i in range(n):
+    for j in range(n):
+        k += 1
+        Jacobi[k] = diff(Es, var(f'u{i}{j}'))
+        Jacobi[k + N] = diff(Es, var(f'v{i}{j}'))
+        Jacobi[k + 2 * N] = diff(Es, var(f'w{i}{j}'))
+        Jacobi[k + 3 * N] = diff(Es, var(f'psi_x{i}{j}'))
+        Jacobi[k + 4 * N] = diff(Es, var(f'psi_y{i}{j}'))
+
+for l in range(5* N):
     k = 0
-    for i to n do
-        for j to n do k = k + 1 Deter[l, k] = diff(Jacobi[l], cat(u, i, j)) Deter[l, k + N] = diff(Jacobi[l], cat(v, i, j)) Deter[l, k + 2*N] = diff(Jacobi[l], cat(w, i, j)) Deter[l, k + 3*N] = diff(Jacobi[l], cat(psix`, i, j)) Deter[l, k + 4*N] = diff(Jacobi[l], cat(`&psiy, i, j)) end do
-    end do
-end do
+    for i in range(n):
+        for j in range(n):
+            k = k + 1
+            Deter[l][ k] = diff(Jacobi[l], var(f'u{i}{j}'))
+            Deter[l][ k + N] = diff(Jacobi[l], var(f'v{i}{j}'))
+            Deter[l][ k + 2 * N] = diff(Jacobi[l], var(f'w{i}{j}'))
+            Deter[l][ k + 3 * N] = diff(Jacobi[l], var(f'psi_x{i}{j}'))
+            Deter[l][ k + 4 * N] = diff(Jacobi[l], var(f'psi_y{i}{j}'))
 
 
-Prob_3 = matrix(5*N, 5*N, [])
+Prob_3 = [[] * 5 * N] * 5 * N
+
 
 MAX = 320
 epsillon = 10 ** (-5)
@@ -178,7 +187,7 @@ for p to MAX do
         for l to 5*N do BufV[l] = Coef[l] end do
         k = 0
         for i to n do
-            for j to n do k = k + 1 cat(u, i, j) = Coef[k] cat(v, i, j) = Coef[k + N] cat(w, i, j) = Coef[k + 2*N] cat(psix`, i, j) = Coef[k + 3*N] cat(`&psiy, i, j) = Coef[k + 4*N] end do
+            for j to n do k = k + 1 var(f'u{i}{j}') = Coef[k] var(f'v{i}{j}') = Coef[k + N] var(f'w{i}{j}') = Coef[k + 2*N] cat(psix`, i, j) = Coef[k + 3*N] cat(`&psiy, i, j) = Coef[k + 4*N] end do
         end do
         for i to 5*N do
             for j to 5*N do Jacobi_1[i] = subs({q = qq}, Jacobi[i]) Deter_1[i, j] = subs({q = qq}, Deter[i, j]) end do

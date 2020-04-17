@@ -1,5 +1,5 @@
 import numpy as np
-from sympy import symbols, diff, integrate, sin, cos, pi, S
+from sympy import symbols, diff, integrate, sin, cos, pi, Matrix
 from sympy.integrals.quadrature import gauss_legendre
 from matplotlib import pyplot as plt
 
@@ -194,16 +194,11 @@ for p in range(MAX):
                     k += 1
 
         for i in range(5 * N):
-            for j in range(5 * N):
-                Jacobi_1[i] = Jacobi[i].subs(q, qq)
-                Deter_1[i * j] = Deter[i * j].subs(q, qq)
+
+            Rans = Matrix(Deter).subs(q, qq) ** -1 * Matrix(Jacobi).subs(q, qq)
 
             for t in range(5 * N):
                 Buf[t] = Coef[t]
-
-            Rans = Deter_1 ** -1 * Jacobi_1
-
-            for t in range(5 * N):
                 Coef[t] = (Buf[t] - Rans[t]).evalf()
 
             delta = abs((BufV[1] - Coef[1]).evalf())

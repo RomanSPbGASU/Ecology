@@ -1,6 +1,8 @@
 import numpy as np
 from math import *
 from sympy import *
+from sympy.integrals.quadrature import gauss_legendre
+from matplotlib import pyplot as plt
 
 E_1 = 2.1 * 10 ** 5
 E_2 = 2.1 * 10 ** 5
@@ -110,8 +112,8 @@ epsilon_y = diff(V, y) / B + diff(B, x) * U / (A * B) - k_y * W + 1 / 2 * theta_
 
 gammax_y = diff(V, x) / A + diff(U, y) / B - diff(A, y) * U / (A * B) - diff(B, x) * V / (A * B) + theta_1 * theta_2
 
-gamma_xz = k * distributed_stress(z)*(Psi_x - theta_1)
-gamma_yz = k * distributed_stress(z)*(Psi_y - theta_2)
+gamma_xz = k * distributed_stress(z) * (Psi_x - theta_1)
+gamma_yz = k * distributed_stress(z) * (Psi_y - theta_2)
 
 kappa_1 = diff(Psi_x, x) / A + diff(A, y) * Psi_y / (A * B)
 kappa_2 = diff(Psi_y, y) / B + diff(B, x) * Psi_x / (A * B)
@@ -137,7 +139,8 @@ Ep = 1 / 2 * ApproximateInt(ApproximateInt(
             M_xy + M_yx) * kappa_12 + Q_x * (Psi_x - theta_1) + Q_y * (Psi_y - theta_2)) * A * B, y=0..b,
     method=simpson), x=a_1..a, method=simpson)
 
-AA = ApproximateInt(ApproximateInt((P_x * U + P_y * V + W * q) * A * B, y=0..b, method=simpson), x=a_1..a, method=simpson)
+AA = ApproximateInt(ApproximateInt((P_x * U + P_y * V + W * q) * A * B, y=0..b, method=simpson), x=a_1..a,
+                    method=simpson)
 Ep = Ep
 AA = AA
 
@@ -153,75 +156,107 @@ for i in range(n):
         Jacobi[k + 3 * N] = diff(Es, var(f'psi_x{i}{j}'))
         Jacobi[k + 4 * N] = diff(Es, var(f'psi_y{i}{j}'))
 
-for l in range(5* N):
+for l in range(5 * N):
     k = 0
     for i in range(n):
         for j in range(n):
             k = k + 1
-            Deter[l][ k] = diff(Jacobi[l], var(f'u{i}{j}'))
-            Deter[l][ k + N] = diff(Jacobi[l], var(f'v{i}{j}'))
-            Deter[l][ k + 2 * N] = diff(Jacobi[l], var(f'w{i}{j}'))
-            Deter[l][ k + 3 * N] = diff(Jacobi[l], var(f'psi_x{i}{j}'))
-            Deter[l][ k + 4 * N] = diff(Jacobi[l], var(f'psi_y{i}{j}'))
-
+            Deter[l][k] = diff(Jacobi[l], var(f'u{i}{j}'))
+            Deter[l][k + N] = diff(Jacobi[l], var(f'v{i}{j}'))
+            Deter[l][k + 2 * N] = diff(Jacobi[l], var(f'w{i}{j}'))
+            Deter[l][k + 3 * N] = diff(Jacobi[l], var(f'psi_x{i}{j}'))
+            Deter[l][k + 4 * N] = diff(Jacobi[l], var(f'psi_y{i}{j}'))
 
 Prob_3 = [[] * 5 * N] * 5 * N
-
 
 MAX = 320
 epsillon = 10 ** (-5)
 delq = 0.01
 qq = 0
-BufV = vector(5*N, [])
-Buf = vector(5*N, [])
-Coef = vector(5*N, [])
-for l to 5*N do
+BufV = [] * 5 * N
+Buf = [] * 5 * N
+Coef = [] * 5 * N
+
+for l in range(5 * N):
     Coef[l] = 0
-end do
 
+AnsMatr = [[] * MAX] * 5 * N
 
-AnsMatr = matrix(MAX, 1 + 5*N, [])
-for p to MAX do
-    del = 1
-    for m to 100 while epsillon < del do
-        for l to 5*N do BufV[l] = Coef[l] end do
-        k = 0
-        for i to n do
-            for j to n do k = k + 1 var(f'u{i}{j}') = Coef[k] var(f'v{i}{j}') = Coef[k + N] var(f'w{i}{j}') = Coef[k + 2*N] cat(psix`, i, j) = Coef[k + 3*N] cat(`&psiy, i, j) = Coef[k + 4*N] end do
-        end do
-        for i to 5*N do
-            for j to 5*N do Jacobi_1[i] = subs({q = qq}, Jacobi[i]) Deter_1[i, j] = subs({q = qq}, Deter[i, j]) end do
-        end do
-        for l to 5*N do
+for p in range(MAX):
+    delta = 0
+    for m in range(100):
+        if delta <= epsillon:
+            break
+
+        for l in range(5*N):
             Buf[l] = Coef[l]
-        end do
+
+        k = 0
+
+        for i in range(n):
+            for j in range(n):
+                k = k + 1
+                var(f'u{i}{j}') = Coef[k]
+                var(f'v{i}{j}') = Coef[k + N]
+                var(f'w{i}{j}') = Coef[k + 2 * N]
+                var(f'psi_x{i}{j}') = Coef[k + 3 * N]
+                var(f'psi_y{i}{j}') = Coef[k + 4 * N]
+
+        for i in range(5* N):
+            for j in range(5 * N):
+                Jacobi_1[i] = subs({q = qq}, Jacobi[i])
+                Deter_1[i][j] = subs({q = qq}, Deter[i, j])
+
+        for l in range(5*N):
+            Buf[l] = Coef[l]
+
         Rans = multiply(inverse(Deter_1), Jacobi_1)
-        for l to 5*N do
+
+        for l in range(5 * N):
             Coef[l] = evalf(Buf[l] - Rans[l])
-        end do
-        del = abs(evalf(BufV[1] - Coef[1]))
-        for l to 5*N do
-            if del < abs(evalf(BufV[l] - Coef[l])) then del = abs(evalf(BufV[l] - Coef[l])) end if
-        end do
-    end do
-    for l to 5*N do
+
+        delta = abs(evalf(BufV[l] - Coef[l]))
+
+        for l in range(5 * N):
+            if abs(evalf(BufV[l] - Coef[l])) > delta:
+                delta = abs(evalf(BufV[l] - Coef[l]))
+
+    for l in range(5*N):
         AnsMatr[p, l + 1] = Coef[l]
-    end do
-    AnsMatr[p, 1] = qq
-    AnsMatr[p, 2] = subs({x = a/2, y = b/2}, W)
-    AnsMatr[p, 3] = subs({x = a/4, y = b/4}, W)
+
+    AnsMatr[p][1] = qq
+    AnsMatr[p][2] = subs({x = a / 2, y = b / 2}, W)
+    AnsMatr[p][3] = subs({x = a / 4, y = b / 4}, W)
     qq = qq + delq
-end do
+
+
 evalm(AnsMatr)
-with(plots)
 
-gr_3 = pointplot([seq([AnsMatr[i, 2], AnsMatr[i, 1]], i = 1 .. MAX)], color = ffc600, symbol = soliddiamond, symbolsize = 15, axis = [gridlines = [10, color = black]], labels = ["W, м", "q, МПа"], legend = "W(a/2, b/2)")
-gr_4 = pointplot([seq([AnsMatr[i, 3], AnsMatr[i, 1]], i = 1 .. MAX)], color = "Teal", symbol = soliddiamond, symbolsize = 15, axis = [gridlines = [10, color = black]], labels = ["W, м", "q, МПа"], legend = "W(a/4, b/4)")
 
-print(display([gr_3, gr_4]))
-
-gr_3 = pointplot([seq([AnsMatr[i, 2], AnsMatr[i, 1]], i = 290 .. 300)], color = ffc600, symbol = soliddiamond, symbolsize = 25, axis = [gridlines = [10, color = black]], labels = ["W", "q"], legend = "W(a/2, b/2)")
-gr_4 = pointplot([seq([AnsMatr[i, 3], AnsMatr[i, 1]], i = 290 .. 300)], color = "Teal", symbol = soliddiamond, symbolsize = 25, axis = [gridlines = [10, color = black]], labels = ["W", "q"], legend = "W(a/4, b/4)")
-
-print(display([gr_3, gr_4]))
-print(display(plot3d()))
+# figure, ax = plt.subplots()
+# ax.plot(X, analytic_result, color='#f12')
+# ax.plot(X, transposed_result, color='#38a')
+# ax.set(ylabel='q, МПа', xlabel='W, м')
+# ax.legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+# figure.show()
+#
+#
+# gr_3 = pointplot([seq([AnsMatr[i, 2], AnsMatr[i, 1]], i=1..MAX)], color=ffc600, symbol=soliddiamond, symbolsize=15,
+#                  axis=[gridlines = [10, color = black]])
+#
+#
+#
+# gr_4 = pointplot([seq([AnsMatr[i, 3], AnsMatr[i, 1]], i=1..MAX)], color="Teal", symbol=soliddiamond, symbolsize=15,
+#                  axis=[gridlines = [10, color = black]], labels = ["W, м", "q, МПа"], legend = "W(a/4, b/4)")
+#
+# print(display([gr_3, gr_4]))
+#
+# gr_3 = pointplot(
+#     [seq([AnsMatr[i, 2], AnsMatr[i, 1]], i=290.. 300)], color = ffc600, symbol = soliddiamond, symbolsize = 25, axis = [
+#     gridlines = [10, color = black]], labels = ["W", "q"], legend = "W(a/2, b/2)")
+# gr_4 = pointplot(
+#     [seq([AnsMatr[i, 3], AnsMatr[i, 1]], i=290.. 300)], color = "Teal", symbol = soliddiamond, symbolsize = 25, axis = [
+#     gridlines = [10, color = black]], labels = ["W", "q"], legend = "W(a/4, b/4)")
+#
+# print(display([gr_3, gr_4]))
+# print(display(plot3d()))

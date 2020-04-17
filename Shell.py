@@ -1,6 +1,5 @@
 import numpy as np
-from math import *
-from sympy import symbols, diff, integrate
+from sympy import symbols, diff, integrate, sin, cos, pi
 from sympy.integrals.quadrature import gauss_legendre
 from matplotlib import pyplot as plt
 
@@ -243,10 +242,12 @@ for p in range(MAX):
 
     AnsMatr.evalm()
 
-A = list(zip(*Matrix2))[:2]
-A = A[1], A[0]
-B = list(zip(*Matrix2))[0:3:2]
-B = B[1], B[0]
+Matrix = AnsMatr
+
+# A = list(zip(*Matrix2))[:2]
+# A = A[1], A[0]
+# B = list(zip(*Matrix2))[0:3:2]
+# B = B[1], B[0]
 
 C = list(zip(*Matrix))[:2]
 C = C[1], C[0]

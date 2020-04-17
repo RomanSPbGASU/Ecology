@@ -68,7 +68,7 @@ def X_5(i):
 
 
 def Y_1(i):
-    return sin((2 * i - 1) * i * pi * y / b)
+    return sin((2 * i - 1) * pi * y / b)
 
 
 def Y_2(i):

@@ -4,6 +4,8 @@ from sympy import *
 from sympy.integrals.quadrature import gauss_legendre
 from matplotlib import pyplot as plt
 
+
+
 E_1 = 2.1 * 10 ** 5
 E_2 = 2.1 * 10 ** 5
 mu_12 = 0.3
@@ -28,7 +30,7 @@ B = 1
 k_x = 1 / r
 k_y = 1 / r
 
-n = 2  # главный параметр для точности расчёта
+n = 1  # главный параметр для точности расчёта
 
 N = n ** 2
 
@@ -85,7 +87,7 @@ def Y_4(i):
 
 
 def Y_5(i):
-    return cos((2 * i - 1) * i * pi * y / b)
+    return cos((2 * i - 1) * pi * y / b)
 
 
 U = 0
@@ -94,13 +96,25 @@ W = 0
 Psi_x = 0
 Psi_y = 0
 
+u = []
+v = []
+w = []
+psi_x = []
+psi_y = []
+
 for i in range(n):
     for j in range(n):
-        U = U + var(f'u{i}{j}') * X_1(i) * Y_1(j)
-        V = W + var(f'v{i}{j}') * X_2(i) * Y_2(j)
-        W = W + var(f'w{i}{j}') * X_3(i) * Y_3(j)
-        Psi_x = Psi_x + var(f'psi_x{i}{j}') + X_4(i) * Y_4(i)
-        Psi_y = Psi_y + var(f'psi_y{i}{j}') + X_5(i) * Y_5(i)
+        u[i][j] = symbols(f'u{i}{j}')
+        v[i][j] = symbols(f'v{i}{j}')
+        w[i][j] = symbols(f'w{i}{j}')
+        psi_x[i][j] = symbols(f'psi_x{i}{j}')
+        psi_y[i][j] = symbols(f'psi_y{i}{j}')
+        
+        U = U + u[i][j] * X_1(i) * Y_1(j)
+        V = W + v[i][j] * X_2(i) * Y_2(j)
+        W = W + w[i][j] * X_3(i) * Y_3(j)
+        Psi_x = Psi_x + psi_x[i][j] + X_4(i) * Y_4(i)
+        Psi_y = Psi_y + psi_y[i][j] + X_5(i) * Y_5(i)
 
 print(U, V, W)
 
@@ -134,13 +148,12 @@ P_y = 0
 Q_x = G_13 * k * h * (Psi_x - theta_1)
 Q_y = G_23 * k * h * (Psi_y - theta_2)
 
-Ep = 1 / 2 * ApproximateInt(ApproximateInt(
+Ep = 1 / 2 * integrate(integrate(
     (N_x * epsilon_x + N_y * epsilon_y + 1 / 2 * (N_xy + N_yx) * gammax_y + M_x * kappa_1 + M_y * kappa_2 + (
-            M_xy + M_yx) * kappa_12 + Q_x * (Psi_x - theta_1) + Q_y * (Psi_y - theta_2)) * A * B, y=0..b,
-    method=simpson), x=a_1..a, method=simpson)
+            M_xy + M_yx) * kappa_12 + Q_x * (Psi_x - theta_1) + Q_y * (Psi_y - theta_2)) * A * B, (y, 0, b)), (x, a_1, a))
 
-AA = ApproximateInt(ApproximateInt((P_x * U + P_y * V + W * q) * A * B, y=0..b, method=simpson), x=a_1..a,
-                    method=simpson)
+q = symbols('q')
+AA = integrate(integrate((P_x * U + P_y * V + W * q) * A * B, (y, 0, b)), (x, a_1, a))
 Ep = Ep
 AA = AA
 
@@ -150,22 +163,22 @@ k = 0
 for i in range(n):
     for j in range(n):
         k += 1
-        Jacobi[k] = diff(Es, var(f'u{i}{j}'))
-        Jacobi[k + N] = diff(Es, var(f'v{i}{j}'))
-        Jacobi[k + 2 * N] = diff(Es, var(f'w{i}{j}'))
-        Jacobi[k + 3 * N] = diff(Es, var(f'psi_x{i}{j}'))
-        Jacobi[k + 4 * N] = diff(Es, var(f'psi_y{i}{j}'))
+        Jacobi[k] = diff(Es, u[i][j])
+        Jacobi[k + N] = diff(Es, v[i][j])
+        Jacobi[k + 2 * N] = diff(Es, w[i][j])
+        Jacobi[k + 3 * N] = diff(Es, psi_x[i][j])
+        Jacobi[k + 4 * N] = diff(Es, psi_y[i][j])
 
 for l in range(5 * N):
     k = 0
     for i in range(n):
         for j in range(n):
             k = k + 1
-            Deter[l][k] = diff(Jacobi[l], var(f'u{i}{j}'))
-            Deter[l][k + N] = diff(Jacobi[l], var(f'v{i}{j}'))
-            Deter[l][k + 2 * N] = diff(Jacobi[l], var(f'w{i}{j}'))
-            Deter[l][k + 3 * N] = diff(Jacobi[l], var(f'psi_x{i}{j}'))
-            Deter[l][k + 4 * N] = diff(Jacobi[l], var(f'psi_y{i}{j}'))
+            Deter[l][k] = diff(Jacobi[l], u[i][j])
+            Deter[l][k + N] = diff(Jacobi[l], v[i][j])
+            Deter[l][k + 2 * N] = diff(Jacobi[l], w[i][j])
+            Deter[l][k + 3 * N] = diff(Jacobi[l], psi_x[i][j])
+            Deter[l][k + 4 * N] = diff(Jacobi[l], psi_y[i][j])
 
 Prob_3 = [[] * 5 * N] * 5 * N
 
@@ -188,7 +201,7 @@ for p in range(MAX):
         if delta <= epsillon:
             break
 
-        for l in range(5*N):
+        for l in range(5 * N):
             Buf[l] = Coef[l]
 
         k = 0
@@ -196,24 +209,40 @@ for p in range(MAX):
         for i in range(n):
             for j in range(n):
                 k = k + 1
-                var(f'u{i}{j}') = Coef[k]
-                var(f'v{i}{j}') = Coef[k + N]
-                var(f'w{i}{j}') = Coef[k + 2 * N]
-                var(f'psi_x{i}{j}') = Coef[k + 3 * N]
-                var(f'psi_y{i}{j}') = Coef[k + 4 * N]
+                u[i][j] = Coef[k]
+                v[i][j] = Coef[k + N]
+                w[i][j] = Coef[k + 2 * N]
+                psi_x[i][j] = Coef[k + 3 * N]
+                psi_y[i][j] = Coef[k + 4 * N]
 
-        for i in range(5* N):
+        for i in range(5 * N):
             for j in range(5 * N):
-                Jacobi_1[i] = subs({q = qq}, Jacobi[i])
-                Deter_1[i][j] = subs({q = qq}, Deter[i, j])
+                Jacobi_1[i] = Jacobi[i].subs(q, qq)
+                Deter_1[i][j] = Deter[i][j].subs(q, qq)
 
-        for l in range(5*N):
-            Buf[l] = Coef[l]
+            for l in range(5 * N):
+                Buf[l] = Coef[l]
 
-        Rans = multiply(inverse(Deter_1), Jacobi_1)
+            Rans = Deter_1 ** -1 * Jacobi_1
+
+            for l in range(5 * N):
+                Coef[l] = (Buf[l] - Rans[l]).evalf()
+
+            delta = abs((BufV[1] - Coef[1]).evalf())
+
+            for l in range(5 * N):
+                if abs((BufV[l] - Coef[l]).evalf()) > delta:
+                    delta = abs((BufV[l] - Coef[l]).evalf())
 
         for l in range(5 * N):
-            Coef[l] = evalf(Buf[l] - Rans[l])
+            AnsMatr[p][l + 1] = Coef[l]
+
+        AnsMatr[p][1] = qq
+        AnsMatr[p][2] = W.subs([(x, a / 2), (y, b / 2)])
+        AnsMatr[p][3] = W.subs([(x, a / 4), (y, b / 4)])
+        qq = qq + delq
+
+    AnsMatr.evalm()
 
 A = list(zip(*Matrix2))[:2]
 A = A[1], A[0]
@@ -227,28 +256,28 @@ D = D[1], D[0]
 
 figure, axes = plt.subplots(2, 2)
 
-axes[0, 0].plot(*A, '.,', color='#f12', linewidth=11)
-axes[0, 0].plot(*B, '.,', color='#38a', linewidth=11)
-axes[0, 0].set(ylabel='q, МПа', xlabel='W, м')
-axes[0, 0].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
-axes[0, 0].grid(color='black', linestyle=':', linewidth=0.2)
+# axes[0, 0].plot(*A, '.,', color='#f12', linewidth=11)
+# axes[0, 0].plot(*B, '.,', color='#38a', linewidth=11)
+# axes[0, 0].set(ylabel='q, МПа', xlabel='W, м')
+# axes[0, 0].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+# axes[0, 0].grid(color='black', linestyle=':', linewidth=0.2)
 
 axes[0, 1].plot(*C, color='#f12')
 axes[0, 1].plot(*D, color='#38a')
 axes[0, 1].set(ylabel='q, МПа', xlabel='W, м')
 axes[0, 1].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
 axes[0, 1].grid(color='black', linestyle=':', linewidth=0.2)
-
-axes[1, 0].plot(*A, color='#f12')
-axes[1, 0].plot(*C, color='#38a')
-axes[1, 0].set(ylabel='q, МПа', xlabel='W, м')
-axes[1, 0].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
-axes[1, 0].grid(color='black', linestyle=':', linewidth=0.2)
-
-axes[1, 1].plot(*B, color='#f12')
-axes[1, 1].plot(*D, color='#38a')
-axes[1, 1].set(ylabel='q, МПа', xlabel='W, м')
-axes[1, 1].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
-axes[1, 1].grid(color='black', linestyle=':', linewidth=0.2)
+#
+# axes[1, 0].plot(*A, color='#f12')
+# axes[1, 0].plot(*C, color='#38a')
+# axes[1, 0].set(ylabel='q, МПа', xlabel='W, м')
+# axes[1, 0].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+# axes[1, 0].grid(color='black', linestyle=':', linewidth=0.2)
+#
+# axes[1, 1].plot(*B, color='#f12')
+# axes[1, 1].plot(*D, color='#38a')
+# axes[1, 1].set(ylabel='q, МПа', xlabel='W, м')
+# axes[1, 1].legend(['W(a/2, b/2)', 'W(a/4, b/4)'])
+# axes[1, 1].grid(color='black', linestyle=':', linewidth=0.2)
 
 figure.show()
